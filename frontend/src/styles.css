@@ -91,6 +91,17 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .sem-cell .sem-split { font-size: 0.72rem; color: var(--graphite); }
 .sem-cell.warn .sem-count { color: var(--alert); }
 
+/* ---------- 儀表板：本學期指引 ---------- */
+.guide-grid { display: grid; gap: 10px; }
+@media (min-width: 560px) { .guide-grid { grid-template-columns: 1fr 1fr; } }
+.guide-card {
+  background: #fff; border: 1.5px solid var(--ink); border-radius: var(--radius);
+  padding: 14px;
+}
+.guide-card ul { margin: 10px 0 0; padding-left: 18px; }
+.guide-card li { font-size: 0.85rem; margin-bottom: 6px; }
+.guide-card li:last-child { margin-bottom: 0; }
+
 /* ---------- 時程清單 ---------- */
 .deadline { display: flex; gap: 12px; padding: 13px 2px; border-bottom: 1px solid var(--rule); }
 .deadline .d-date {

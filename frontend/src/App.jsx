@@ -8,6 +8,39 @@ const SUBCATS = {
   diverse: ['自主學習', '社團參與', '幹部經歷', '志工服務', '競賽表現', '檢定證照', '彈性學習', '其他活動'],
 };
 
+/**
+ * 每學期建議累積的素材 — 依 108 課綱審查趨勢整理
+ * （招聯會「三重二不」、作伙學審議計畫、大學教授訪談彙整；詳見專案研究報告）
+ */
+const GUIDE = {
+  general: {
+    course: [
+      '課堂書面報告、小論文：開頭放摘要，寫清楚「哪門課、為什麼做」',
+      '探究與實作紀錄：卡住的地方＋怎麼解決，過程比完美結果更加分',
+      '學習單別直接掃描上傳——加上自己的整理與反思，才算「成果」',
+    ],
+    diverse: [
+      '自主學習計畫與成果：教授最重視的熱忱證明',
+      '社團／幹部／志工：挑「有你的角色與成長」的，避免人人都有的制式證明',
+      '從日常生活長出來的探究（自製作品、幫家裡解決問題）勝過昂貴營隊',
+    ],
+    tip: '存之前問自己：「如果不放備審，我還想不想做這件事？」——想，就值得存。',
+  },
+  vocational: {
+    course: [
+      '專題製作＋實習報告：四技甄選必採核心（B-1），每個階段都留紀錄',
+      '實習課實作照片＋解決問題的過程：失敗再修正的紀錄最有價值',
+      '專業科目報告：寫下操作步驟之外「你的判斷與調整」',
+    ],
+    diverse: [
+      '檢定證照（乙級尤佳）與技藝競賽：甄選可直接加分，考到就存',
+      '自主學習、社團與幹部經歷、校內活動',
+      '業界參訪／校外實習心得：連結你的科別與升學志向',
+    ],
+    tip: '每學期存 2–3 件就很夠。備審是「挑」出來的，重點是反思，不是塞好塞滿。',
+  },
+};
+
 /** 由年級推算學生的六個學期代碼（例：11年級、115學年 → 114-1 起共六格） */
 function semestersFor(grade) {
   // 目前學年：2026-07 → 115 學年即將開始；以入學學年回推
@@ -127,8 +160,39 @@ function Dashboard({ student }) {
       </div>
       <p className="hint">空格＝該學期還沒有素材。事後無法補件，養成隨手存的習慣最重要。</p>
 
+      <SemesterGuide schoolType={student.school_type} />
+
       <h2>90 天內的截止日</h2>
       <DeadlineList items={data.upcoming} emptyText="接下來 90 天沒有截止日，可以安心累積素材。" />
+    </>
+  );
+}
+
+/** 這學期可以存什麼 — 依學制顯示建議 */
+function SemesterGuide({ schoolType }) {
+  const guide = GUIDE[schoolType] || GUIDE.general;
+  return (
+    <>
+      <h2>
+        這學期可以存什麼 <span className="hl">{schoolType === 'vocational' ? '技高版' : '普高版'}</span>
+      </h2>
+      <div className="guide-grid">
+        <div className="guide-card">
+          <span className="tag course">課程學習成果</span>
+          <ul>
+            {guide.course.map((t) => <li key={t}>{t}</li>)}
+          </ul>
+        </div>
+        <div className="guide-card">
+          <span className="tag diverse">多元表現</span>
+          <ul>
+            {guide.diverse.map((t) => <li key={t}>{t}</li>)}
+          </ul>
+        </div>
+      </div>
+      <p className="hint">
+        {guide.tip} 申請時大學至多參採 3 件課程成果＋10 件多元表現——重質不重量、重反思。
+      </p>
     </>
   );
 }
