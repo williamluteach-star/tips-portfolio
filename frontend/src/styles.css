@@ -1,0 +1,144 @@
+/* ============ TIPS 學習歷程 — 數位筆記本設計系統 ============
+   墨藍 ink      #16233B  主文字、深色區塊
+   紙白 paper    #F7F7F4  底色
+   螢光黃 mark   #FFDE59  重點標記（螢光筆）
+   石墨 graphite #5B6472  次要文字
+   提醒紅 alert  #C93A2E  截止日、錯誤
+   格線 rule     #E3E1DA  分隔線
+================================================================ */
+:root {
+  --ink: #16233b;
+  --paper: #f7f7f4;
+  --mark: #ffde59;
+  --graphite: #5b6472;
+  --alert: #c93a2e;
+  --rule: #e3e1da;
+  --radius: 10px;
+  --font-body: 'Noto Sans TC', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root { min-height: 100dvh; display: flex; flex-direction: column; }
+
+/* ---------- 螢光筆標記（招牌元素） ---------- */
+.hl {
+  background: linear-gradient(transparent 55%, var(--mark) 55%, var(--mark) 92%, transparent 92%);
+  padding: 0 2px;
+}
+
+/* ---------- 版面 ---------- */
+.shell { max-width: 720px; width: 100%; margin: 0 auto; padding: 16px 16px 96px; }
+
+.topbar {
+  display: flex; align-items: baseline; justify-content: space-between;
+  padding: 20px 0 12px; border-bottom: 2px solid var(--ink);
+}
+.brand { font-weight: 900; font-size: 1.15rem; letter-spacing: 0.02em; }
+.brand small { font-weight: 500; color: var(--graphite); margin-left: 8px; font-size: 0.75rem; }
+.topbar button { background: none; border: none; color: var(--graphite); font: inherit; cursor: pointer; text-decoration: underline; }
+
+h2 { font-size: 1.05rem; font-weight: 900; margin: 28px 0 12px; }
+
+/* ---------- 登入頁 ---------- */
+.login-wrap { flex: 1; display: grid; place-items: center; padding: 24px; }
+.login-card { width: 100%; max-width: 360px; }
+.login-card h1 { font-size: 1.7rem; font-weight: 900; line-height: 1.3; margin-bottom: 6px; }
+.login-card p.sub { color: var(--graphite); font-size: 0.9rem; margin-bottom: 28px; }
+
+/* ---------- 表單 ---------- */
+label { display: block; font-size: 0.82rem; font-weight: 700; margin: 14px 0 6px; }
+input, select, textarea {
+  width: 100%; padding: 11px 12px; font: inherit;
+  border: 1.5px solid var(--ink); border-radius: var(--radius);
+  background: #fff; color: var(--ink);
+}
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible {
+  outline: 3px solid var(--mark); outline-offset: 1px;
+}
+.btn {
+  display: block; width: 100%; margin-top: 20px; padding: 13px;
+  font: inherit; font-weight: 900; letter-spacing: 0.06em;
+  background: var(--ink); color: var(--paper);
+  border: none; border-radius: var(--radius); cursor: pointer;
+}
+.btn:disabled { opacity: 0.5; cursor: wait; }
+.btn-ghost {
+  background: none; color: var(--ink); border: 1.5px solid var(--ink);
+}
+.err { color: var(--alert); font-size: 0.85rem; margin-top: 12px; }
+.ok-msg { font-size: 0.85rem; margin-top: 12px; }
+
+/* ---------- 三年學期格子（儀表板招牌） ---------- */
+.sem-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.sem-cell {
+  border: 1.5px solid var(--ink); border-radius: var(--radius);
+  padding: 12px 10px; background: #fff; min-height: 92px;
+}
+.sem-cell.empty { border-style: dashed; border-color: var(--graphite); background: none; }
+.sem-cell .sem-name { font-family: var(--font-mono); font-size: 0.72rem; color: var(--graphite); }
+.sem-cell .sem-count { font-size: 1.5rem; font-weight: 900; margin-top: 2px; }
+.sem-cell .sem-count small { font-size: 0.7rem; font-weight: 500; color: var(--graphite); margin-left: 3px; }
+.sem-cell .sem-split { font-size: 0.72rem; color: var(--graphite); }
+.sem-cell.warn .sem-count { color: var(--alert); }
+
+/* ---------- 時程清單 ---------- */
+.deadline { display: flex; gap: 12px; padding: 13px 2px; border-bottom: 1px solid var(--rule); }
+.deadline .d-date {
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500;
+  white-space: nowrap; padding-top: 2px;
+}
+.deadline .d-date.soon { color: var(--alert); font-weight: 700; }
+.deadline .d-title { font-size: 0.92rem; }
+.deadline .d-note { font-size: 0.78rem; color: var(--graphite); }
+
+/* ---------- 素材卡片 ---------- */
+.artifact {
+  background: #fff; border: 1.5px solid var(--ink); border-radius: var(--radius);
+  padding: 14px; margin-bottom: 12px;
+}
+.artifact .a-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.artifact .a-title { font-weight: 700; }
+.artifact .a-meta { font-family: var(--font-mono); font-size: 0.72rem; color: var(--graphite); margin-top: 4px; }
+.artifact .a-note { font-size: 0.85rem; margin-top: 8px; }
+.artifact a { color: var(--ink); }
+.tag {
+  display: inline-block; font-size: 0.7rem; font-weight: 700;
+  padding: 2px 8px; border-radius: 99px; white-space: nowrap;
+}
+.tag.course { background: var(--mark); }
+.tag.diverse { background: var(--ink); color: var(--paper); }
+.a-del { background: none; border: none; color: var(--alert); font-size: 0.78rem; cursor: pointer; text-decoration: underline; margin-top: 8px; }
+
+/* ---------- 底部分頁列 ---------- */
+.tabbar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  display: flex; background: var(--ink);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.tabbar button {
+  flex: 1; padding: 14px 0 12px; background: none; border: none;
+  color: rgba(247, 247, 244, 0.65); font: inherit; font-size: 0.82rem; font-weight: 700; cursor: pointer;
+}
+.tabbar button.active { color: var(--paper); }
+.tabbar button.active span {
+  background: linear-gradient(transparent 60%, var(--mark) 60%);
+  color: var(--paper); padding: 0 2px;
+}
+
+.empty-hint { color: var(--graphite); font-size: 0.88rem; padding: 24px 0; text-align: center; }
+.hint { font-size: 0.78rem; color: var(--graphite); margin-top: 6px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .artifact, .sem-cell { transition: transform 0.12s ease; }
+  .artifact:active { transform: scale(0.99); }
+}
