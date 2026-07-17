@@ -60,6 +60,13 @@ function semestersFor(grade) {
   return list;
 }
 
+/** 目前學期代碼（例：115-1）。7 月起視為新學年第 1 學期、2–6 月為第 2 學期 */
+function currentSemester() {
+  const m = new Date().getMonth() + 1;
+  const sem = (m >= 7 || m === 1) ? 1 : 2;
+  return `${currentAcademicYear()}-${sem}`;
+}
+
 function daysUntil(iso) {
   return Math.ceil((new Date(iso) - new Date()) / 86400000);
 }
@@ -171,7 +178,16 @@ function Dashboard({ student }) {
           );
         })}
       </div>
-      <p className="hint">空格＝該學期還沒有素材。事後無法補件，養成隨手存的習慣最重要。</p>
+      <p className="hint">空格＝該學期還沒有素材。<span className="hl">課程學習成果只能在修課當學期上傳學校平台＋老師認證，逾期無法補件</span>（只在高一開的課，就只能在高一上傳）；多元表現則可跨學年補傳。</p>
+
+      <QuotaBar bySemester={data.bySemester} />
+
+      <p className="hint">
+        每個校系參採的項目都不一樣，挑素材前先查目標校系的公告：
+        {student.school_type === 'vocational'
+          ? <a href="https://gotech.ntust.edu.tw/" target="_blank" rel="noreferrer">四技二專備審資料準備指引平台</a>
+          : <a href="https://collego.edu.tw/" target="_blank" rel="noreferrer">ColleGo! 大學校系參採查詢</a>}
+      </p>
 
       <SemesterGuide schoolType={student.school_type} />
 
@@ -207,6 +223,24 @@ function SemesterGuide({ schoolType }) {
         {guide.tip} 申請時大學至多參採 3 件課程成果＋10 件多元表現——重質不重量、重反思。
       </p>
     </>
+  );
+}
+
+/** 本學年中央資料庫勾選額度提示（課程成果 6／多元 10） */
+function QuotaBar({ bySemester }) {
+  const ay = currentAcademicYear();
+  let course = 0, diverse = 0;
+  Object.keys(bySemester || {}).forEach((sem) => {
+    if (sem.startsWith(`${ay}-`)) {
+      course += bySemester[sem].course || 0;
+      diverse += bySemester[sem].diverse || 0;
+    }
+  });
+  return (
+    <p className="hint">
+      本學年（{ay}）素材累積：課程成果 <b>{course}</b> 件・多元表現 <b>{diverse}</b> 件
+      <br />提醒：每學年勾選中央資料庫上限＝課程成果 <b>6</b> 件、多元表現 <b>10</b> 件（上傳學校平台的數量依各校規定）；大學申請時至多參採 3＋10 件，重點是挑出最好的，不是塞滿。
+    </p>
   );
 }
 
@@ -371,15 +405,20 @@ function ArtifactForm({ student, onSaved }) {
     try {
       let filePart = {};
       if (file) {
-        const isVideo = file.type.startsWith('video/');
-        const limit = isVideo ? 10 : 4;
+        const fname = file.name.toLowerCase();
+        const isMedia = /\.(mp3|mp4)$/.test(fname);
+        const isDoc = /\.(pdf|jpg|jpeg|png)$/.test(fname);
+        if (!isDoc && !isMedia) {
+          throw new Error('中央資料庫只收 PDF／JPG／PNG（文件）與 MP3／MP4（影音），請先轉檔再上傳（例：Word 請先另存成 PDF）');
+        }
+        const limit = isMedia ? 10 : 4;
         if (file.size / 1048576 > limit) {
           throw new Error(`檔案超過 ${limit}MB 上限（中央資料庫規範），請先壓縮`);
         }
         setMsg('檔案上傳中…');
         const base64 = await fileToBase64(file);
         const up = await api('uploadFile', { base64, filename: file.name, mimeType: file.type });
-        filePart = { file_url: up.file_url, file_size_mb: up.file_size_mb, file_type: isVideo ? 'video_link' : (file.type === 'application/pdf' ? 'pdf' : 'image') };
+        filePart = { file_url: up.file_url, file_size_mb: up.file_size_mb, file_type: isMedia ? 'video_link' : (fname.endsWith('.pdf') ? 'pdf' : 'image') };
       }
       await api('createArtifact', { ...form, ...filePart });
       setMsg('已儲存！');
@@ -411,6 +450,12 @@ function ArtifactForm({ student, onSaved }) {
       <select id="f-sem" value={form.semester} onChange={(e) => set('semester', e.target.value)}>
         {semesters.map((s) => <option key={s}>{s}</option>)}
       </select>
+      {form.category === 'course_result' && form.semester !== currentSemester() && (
+        <p className="err">⚠️ 注意：課程學習成果須在<b>修課當學期</b>上傳學校平台並經任課老師認證，逾期無法補件。這裡選了非本學期（本學期是 {currentSemester()}），請確認這件成果當時已在學校平台完成上傳認證，否則只能作為自己的紀錄。</p>
+      )}
+      {form.category === 'diverse' && (
+        <p className="hint">多元表現免教師認證、可跨學年補傳，但別忘了每學年勾選中央上限 10 件。</p>
+      )}
 
       <label htmlFor="f-subj">科目／活動名稱</label>
       <input id="f-subj" value={form.subject_or_event} onChange={(e) => set('subject_or_event', e.target.value)} placeholder="例：電子學實習、校慶園遊會" />
@@ -418,8 +463,8 @@ function ArtifactForm({ student, onSaved }) {
       <label htmlFor="f-note">當下心得速記（之後寫反思會感謝現在的自己）</label>
       <textarea id="f-note" rows="3" value={form.quick_note} onChange={(e) => set('quick_note', e.target.value)} placeholder="今天做了什麼？卡在哪裡？學到什麼？" />
 
-      <label htmlFor="f-file">附件（文件 ≤4MB／影音 ≤10MB）</label>
-      <input id="f-file" type="file" onChange={(e) => setFile(e.target.files[0] || null)} />
+      <label htmlFor="f-file">附件（中央資料庫規格：PDF/JPG/PNG ≤4MB；MP3/MP4 ≤10MB）</label>
+      <input id="f-file" type="file" accept=".pdf,.jpg,.jpeg,.png,.mp3,.mp4" onChange={(e) => setFile(e.target.files[0] || null)} />
 
       <button className="btn" onClick={submit} disabled={busy}>{busy ? '儲存中…' : '儲存素材'}</button>
       {msg && <p className="ok-msg">{msg}</p>}

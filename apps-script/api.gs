@@ -273,9 +273,16 @@ function deleteArtifact_(student, p) {
 
 function uploadFile_(student, p) {
   if (!p || !p.base64 || !p.filename || !p.mimeType) return { ok: false, error: '檔案資料不完整' };
+  // 中央資料庫格式白名單：文件 PDF/JPG/PNG、影音 MP3/MP4（2026-07-17 依官方規範查證）
+  const fname = String(p.filename).toLowerCase();
+  const isDoc = /\.(pdf|jpg|jpeg|png)$/.test(fname);
+  const isMedia = /\.(mp3|mp4)$/.test(fname);
+  if (!isDoc && !isMedia) {
+    return { ok: false, error: '中央資料庫只收 PDF／JPG／PNG（文件）與 MP3／MP4（影音），請先轉檔再上傳' };
+  }
   const bytes = Utilities.base64Decode(p.base64);
   const sizeMb = bytes.length / (1024 * 1024);
-  const isVideo = /^video\//.test(p.mimeType);
+  const isVideo = isMedia;
   const limit = isVideo ? CONFIG.MAX_VIDEO_MB : CONFIG.MAX_DOC_MB;
   if (sizeMb > limit) {
     return { ok: false, error: '檔案 ' + sizeMb.toFixed(1) + 'MB 超過上限 ' + limit + 'MB（中央資料庫規範），請壓縮後再上傳' };
