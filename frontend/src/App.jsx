@@ -4,8 +4,37 @@ import { api, setToken, fileToBase64 } from './api.js';
 /* ============ 常數 ============ */
 
 const SUBCATS = {
-  course_result: ['書面報告', '實作作品', '探究與實作', '學習單', '專題製作', '專業實習報告'],
-  diverse: ['自主學習', '社團參與', '幹部經歷', '志工服務', '競賽表現', '檢定證照', '彈性學習', '其他活動'],
+  course_result: ['書面報告', '實作作品', '探究與實作成果', '專題實作（技高B-1）', '實習科目成果（技高B-1）', '學習單整理', '其他課程成果'],
+  diverse: ['自主學習', '特殊優良表現', '社團活動', '競賽表現', '檢定證照', '服務學習/志工', '幹部經歷', '非修課成果作品', '彈性學習', '其他'],
+};
+
+/**
+ * 多元表現官方八項＋全國校系採計率（高點EDC彙整個申資料，2026-07 查證）。
+ * 給孩子「明確指令」：照採計率排序，先存最多校系要看的。
+ */
+const DIVERSE_PRIORITY = [
+  ['自主學習計畫與成果', '87%', '最重要！近九成校系採計。主題不用大，「自己想學＋有紀錄＋有成果」就成立'],
+  ['特殊優良表現證明', '48%', '獎狀、入選、發表——任何「被肯定」的證明都算'],
+  ['社團活動經驗', '45%', '重點寫你的角色與貢獻，不是社團名稱'],
+  ['競賽表現', '34%', '校內外都算，名次不是重點，過程反思才是'],
+  ['檢定證照', '27%', '英檢、乙丙級證照——考到當學期就存'],
+  ['服務學習經驗', '23%', '持續性勝過次數，寫你觀察到什麼'],
+  ['擔任幹部經驗', '20%', '具體做了什麼決定、解決什麼問題'],
+  ['非修課紀錄之成果作品', '20%', '課外自己做的作品：程式、影片、手作都算'],
+];
+
+const COURSE_TYPES = {
+  general: [
+    ['書面報告', '課堂報告、小論文——開頭放摘要，寫清楚哪門課、為什麼做'],
+    ['實作作品', '作品照片＋製作過程＋你的取捨判斷'],
+    ['自然科學領域探究與實作成果', '普高必修，個申常客——卡關與修正過程最有價值'],
+    ['社會領域探究活動成果', '議題探究、訪查報告'],
+  ],
+  vocational: [
+    ['專題實作（B-1）', '四技甄選多數系必採！每個階段都留紀錄：構想→製作→除錯→成品'],
+    ['實習科目學習成果（B-1）', '實習課的實作照片＋操作步驟外「你的判斷與調整」'],
+    ['其他課程學習成果（B-2）', '專業科目報告、學科報告'],
+  ],
 };
 
 /**
@@ -67,6 +96,14 @@ function currentSemester() {
   return `${currentAcademicYear()}-${sem}`;
 }
 
+/** 學期相對現在的狀態：past / now / future */
+function semState(sem) {
+  const [y, t] = String(sem).split('-').map(Number);
+  const [cy, ct] = currentSemester().split('-').map(Number);
+  const a = y * 2 + t, b = cy * 2 + ct;
+  return a === b ? 'now' : a < b ? 'past' : 'future';
+}
+
 function daysUntil(iso) {
   return Math.ceil((new Date(iso) - new Date()) / 86400000);
 }
@@ -76,9 +113,9 @@ function daysUntil(iso) {
 export default function App() {
   const [student, setStudent] = useState(null);
   const [tab, setTab] = useState('dashboard');
-  const [quickAdd, setQuickAdd] = useState(false);
+  const [quickAdd, setQuickAdd] = useState(null); // null | { semester }
 
-  function goQuickAdd() { setQuickAdd(true); setTab('artifacts'); }
+  function goQuickAdd(semester) { setQuickAdd({ semester: semester || null }); setTab('artifacts'); }
 
   if (!student) return <Login onDone={(u) => { setStudent(u); setTab(u.role === 'teacher' ? 'students' : 'dashboard'); }} />;
 
@@ -97,7 +134,7 @@ export default function App() {
       </header>
 
       {!isTeacher && tab === 'dashboard' && <Dashboard student={student} onQuickAdd={goQuickAdd} />}
-      {!isTeacher && tab === 'artifacts' && <Artifacts student={student} autoOpen={quickAdd} onAutoOpenDone={() => setQuickAdd(false)} />}
+      {!isTeacher && tab === 'artifacts' && <Artifacts student={student} autoOpen={quickAdd} onAutoOpenDone={() => setQuickAdd(null)} />}
       {!isTeacher && tab === 'timeline' && <Timeline />}
       {isTeacher && tab === 'students' && <TeacherStudents />}
       {isTeacher && tab === 'deadlines' && <TeacherDeadlines />}
@@ -165,33 +202,56 @@ function Dashboard({ student, onQuickAdd }) {
   if (err) return <p className="err">{err}</p>;
   if (!data) return <p className="empty-hint">載入中…</p>;
 
+  const voc = student.school_type === 'vocational';
+
   return (
     <>
-      <button className="btn cta-big" onClick={onQuickAdd}>📸 快拍存素材（30 秒搞定）</button>
+      <button className="btn cta-big" onClick={() => onQuickAdd()}>📸 快拍存素材（存到本學期）</button>
+      <p className="hint" style={{ marginTop: -8 }}>你的學制：<b className="hl">{voc ? '技術型高中（技高）' : '普通型高中（普高）'}</b>——本頁的額度、指引、按鈕都是你的學制專屬版本。</p>
 
       <h2>三年進度 <span className="hl">共 {data.total} 件素材</span></h2>
-      <div className="sem-grid">
-        {semesters.map((sem) => {
-          const c = data.bySemester[sem];
-          const total = c ? c.course + c.diverse : 0;
-          return (
-            <div key={sem} className={`sem-cell ${total === 0 ? 'empty' : ''} ${total === 0 ? 'warn' : ''}`}>
-              <div className="sem-name">{sem}</div>
-              <div className="sem-count">{total}<small>件</small></div>
-              {c && <div className="sem-split">成果 {c.course}・多元 {c.diverse}</div>}
+      {[0, 1, 2].map((y) => {
+        const yearSems = semesters.slice(y * 2, y * 2 + 2);
+        const ay = yearSems[0].split('-')[0];
+        let yc = 0, yd = 0;
+        yearSems.forEach((s) => { const b = data.bySemester[s]; if (b) { yc += b.course; yd += b.diverse; } });
+        return (
+          <div key={ay} className="year-block">
+            <div className="year-head">
+              <span className="year-name">高{['一', '二', '三'][y]}（{ay} 學年）</span>
+              <span className="year-quota">課程成果 <b>{yc}</b>/6・多元 <b>{yd}</b>/10<small>　中央勾選額度</small></span>
             </div>
-          );
-        })}
-      </div>
-      <p className="hint">空格＝該學期還沒有素材。<span className="hl">課程學習成果只能在修課當學期上傳學校平台＋老師認證，逾期無法補件</span>（只在高一開的課，就只能在高一上傳）；多元表現則可跨學年補傳。</p>
+            <div className="sem-grid2">
+              {yearSems.map((sem) => {
+                const b = data.bySemester[sem] || { course: 0, diverse: 0 };
+                const st = semState(sem);
+                return (
+                  <div key={sem} className={`sem-cell2 ${st}`}>
+                    <div className="sem-name">{sem}{st === 'now' && <span className="now-badge">本學期</span>}</div>
+                    <div className="sem-split2">課程成果 <b>{b.course}</b> 件・多元 <b>{b.diverse}</b> 件</div>
+                    {st === 'future'
+                      ? <span className="sem-lock">還沒開始</span>
+                      : <button className="btn-sm sem-add" onClick={() => onQuickAdd(sem)}>＋ 存到這學期</button>}
+                    {st === 'now' && b.course + b.diverse === 0 && (
+                      <p className="cell-nudge">這學期還空著——先存 1 件，就贏過放棄學檔的那 40% 的人</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+      <p className="hint"><span className="hl">課程學習成果只能在修課當學期上傳學校平台＋老師認證，逾期無法補件</span>（只在高一開的課，就只能在高一上傳）；多元表現可跨學年補傳，點過去學期的「＋」就能補。</p>
 
-      <QuotaBar bySemester={data.bySemester} schoolType={student.school_type} />
+      <CategoryGuide schoolType={student.school_type} />
 
       <p className="hint">
         每個校系參採的項目都不一樣，挑素材前先查目標校系的公告：
-        {student.school_type === 'vocational'
+        {voc
           ? <a href="https://gotech.ntust.edu.tw/" target="_blank" rel="noreferrer">四技二專備審資料準備指引平台</a>
           : <a href="https://collego.edu.tw/" target="_blank" rel="noreferrer">ColleGo! 大學校系參採查詢</a>}
+        ；{voc ? '四技甄選各系件數自訂（B-1 至少 1 件）' : '個申各系至多參採 3＋10 件'}。
       </p>
 
       <SemesterGuide schoolType={student.school_type} />
@@ -199,6 +259,35 @@ function Dashboard({ student, onQuickAdd }) {
       <h2>90 天內的截止日</h2>
       <DeadlineList items={data.upcoming} emptyText="接下來 90 天沒有截止日，可以安心累積素材。" />
     </>
+  );
+}
+
+/** 該存什麼？官方類別＋全國採計率 — 給孩子最明確的指令 */
+function CategoryGuide({ schoolType }) {
+  const courses = COURSE_TYPES[schoolType] || COURSE_TYPES.general;
+  return (
+    <div className="cat-guide">
+      <h2>該存什麼？<span className="hl">照這個清單存就對了</span></h2>
+
+      <div className="cat-card">
+        <h3>📘 課程學習成果 <small>每學年勾選上限 6 件・須老師認證</small></h3>
+        <ul>
+          {courses.map(([name, desc]) => (
+            <li key={name}><b>{name}</b>：{desc}</li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="cat-card">
+        <h3>🌟 多元表現 <small>每學年勾選上限 10 件・免認證・可跨學年補傳</small></h3>
+        <p className="hint" style={{ margin: '4px 0 8px' }}>右邊百分比＝全國有多少校系採計這一項。先存排前面的，CP 值最高：</p>
+        <ul>
+          {DIVERSE_PRIORITY.map(([name, pct, desc]) => (
+            <li key={name}><span className="pct">{pct}</span><b>{name}</b>：{desc}</li>
+          ))}
+        </ul>
+      </div>
+    </div>
   );
 }
 
@@ -415,6 +504,7 @@ function ArtifactPack({ artifact, onChanged }) {
 function Artifacts({ student, autoOpen, onAutoOpenDone }) {
   const [list, setList] = useState(null);
   const [showForm, setShowForm] = useState(!!autoOpen);
+  const [initSem, setInitSem] = useState(autoOpen ? autoOpen.semester : null);
   const [err, setErr] = useState('');
 
   function reload() {
@@ -422,7 +512,7 @@ function Artifacts({ student, autoOpen, onAutoOpenDone }) {
   }
   useEffect(reload, []);
   useEffect(() => {
-    if (autoOpen) { setShowForm(true); onAutoOpenDone && onAutoOpenDone(); }
+    if (autoOpen) { setShowForm(true); setInitSem(autoOpen.semester); onAutoOpenDone && onAutoOpenDone(); }
   }, [autoOpen]);
 
   async function remove(id) {
@@ -437,7 +527,7 @@ function Artifacts({ student, autoOpen, onAutoOpenDone }) {
       <button className="btn" onClick={() => setShowForm(!showForm)}>
         {showForm ? '收起表單' : '＋ 新增素材'}
       </button>
-      {showForm && <ArtifactForm student={student} onSaved={() => { setShowForm(false); reload(); }} />}
+      {showForm && <ArtifactForm key={initSem || 'now'} student={student} initialSemester={initSem} onSaved={() => { setShowForm(false); setInitSem(null); reload(); }} />}
       <SynthesisCoach />
       {err && <p className="err">{err}</p>}
 
@@ -483,12 +573,16 @@ async function compressImage(file, limitMB) {
   return null;
 }
 
-function ArtifactForm({ student, onSaved }) {
+function ArtifactForm({ student, onSaved, initialSemester }) {
   const semesters = useMemo(() => semestersFor(student.grade), [student.grade]);
   const nowSem = currentSemester();
+  const startSem = (initialSemester && semesters.includes(initialSemester)) ? initialSemester
+    : (semesters.includes(nowSem) ? nowSem : semesters[0]);
+  const isPastTarget = initialSemester && semState(initialSemester) === 'past';
   const [form, setForm] = useState({
-    title: '', category: 'course_result', subcategory: SUBCATS.course_result[0],
-    semester: semesters.includes(nowSem) ? nowSem : semesters[0], subject_or_event: '', quick_note: '',
+    title: '', category: isPastTarget ? 'diverse' : 'course_result',
+    subcategory: SUBCATS[isPastTarget ? 'diverse' : 'course_result'][0],
+    semester: startSem, subject_or_event: '', quick_note: '',
   });
   const [file, setFile] = useState(null);
   const [more, setMore] = useState(false);

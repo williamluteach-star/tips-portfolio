@@ -222,3 +222,74 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
   padding: 14px 16px; margin-top: 8px; font-size: 0.9rem;
 }
 .pack-body textarea { width: 100%; border: 1.5px solid var(--rule); border-radius: 8px; padding: 8px 10px; font-family: var(--font-body); font-size: 0.9rem; }
+
+/* ---------- 三年進度改版：學年區塊＋每格上傳按鈕 ---------- */
+.year-block {
+  border: 1.5px solid var(--ink); border-radius: var(--radius);
+  background: #fff; margin-bottom: 14px; overflow: hidden;
+}
+.year-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  flex-wrap: wrap; gap: 4px 12px;
+  background: var(--ink); color: var(--paper); padding: 8px 14px;
+}
+.year-name { font-weight: 900; font-size: 0.95rem; }
+.year-quota { font-size: 0.8rem; font-family: var(--font-mono); }
+.year-quota b { color: var(--mark); font-size: 0.95rem; }
+.year-quota small { font-size: 0.68rem; opacity: 0.75; }
+.sem-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+.sem-cell2 {
+  padding: 12px 14px; border-left: 1.5px solid var(--rule);
+  display: flex; flex-direction: column; gap: 6px; align-items: flex-start;
+}
+.sem-cell2:first-child { border-left: none; }
+.sem-cell2 .sem-name {
+  font-family: var(--font-mono); font-size: 0.74rem; color: var(--graphite);
+  display: flex; align-items: center; gap: 6px;
+}
+.sem-cell2.now { background: #fffbe8; box-shadow: inset 0 0 0 2px var(--mark); }
+.sem-cell2.future { background: var(--paper); opacity: 0.65; }
+.now-badge {
+  background: var(--mark); color: var(--ink); border-radius: 999px;
+  padding: 1px 8px; font-size: 0.68rem; font-weight: 900;
+  font-family: var(--font-body);
+}
+.sem-split2 { font-size: 0.82rem; }
+.sem-split2 b { font-size: 1.05rem; }
+.sem-lock { font-size: 0.78rem; color: var(--graphite); }
+.sem-add { margin-top: 2px; }
+.sem-cell2.now .sem-add { background: var(--ink); color: var(--mark); border-color: var(--ink); }
+.cell-nudge { font-size: 0.75rem; color: var(--alert); line-height: 1.5; margin: 0; }
+
+/* ---------- 該存什麼？官方類別指引 ---------- */
+.cat-guide { margin-top: 6px; }
+.cat-card {
+  background: #fff; border: 1.5px solid var(--ink); border-radius: var(--radius);
+  padding: 14px 16px; margin-bottom: 12px; box-shadow: 3px 3px 0 var(--rule);
+}
+.cat-card h3 {
+  font-size: 0.98rem; margin-bottom: 8px;
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+}
+.cat-card h3 small {
+  font-size: 0.72rem; font-weight: 700; color: var(--paper);
+  background: var(--graphite); border-radius: 999px; padding: 2px 10px;
+}
+.cat-card ul { list-style: none; }
+.cat-card li {
+  font-size: 0.86rem; padding: 6px 0; border-top: 1px dashed var(--rule);
+  line-height: 1.6;
+}
+.cat-card li:first-child { border-top: none; }
+.pct {
+  display: inline-block; min-width: 44px; text-align: center;
+  background: var(--mark); color: var(--ink); border-radius: 6px;
+  font-family: var(--font-mono); font-size: 0.72rem; font-weight: 700;
+  padding: 1px 6px; margin-right: 8px;
+}
+@media (max-width: 480px) {
+  .year-head { padding: 8px 12px; }
+  .sem-grid2 { grid-template-columns: 1fr; }
+  .sem-cell2 { border-left: none; border-top: 1.5px solid var(--rule); }
+  .sem-cell2:first-child { border-top: none; }
+}
