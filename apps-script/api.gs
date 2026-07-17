@@ -26,6 +26,7 @@ function doPost(e) {
   try {
     switch (req.action) {
       case 'login':          return json_(login_(req.payload));
+      case 'waitlist':       return json_(saveWaitlist_(req.payload));
       default: {
         const user = auth_(req.token);
         // 老師端點
@@ -338,4 +339,33 @@ function locateRow_(sheetName, key, value) {
     }
   }
   return null;
+}
+
+/* ---------------- 美國版 waitlist（portfolio.tips-edu.com/us/） ---------------- */
+
+/**
+ * 儲存美國版候補名單。無需登入；含 honeypot 欄位（website）防機器人。
+ * payload: { role, name, email, gradYear, contactApp, contactId, lang, notes, website }
+ */
+function saveWaitlist_(p) {
+  if (!p || !p.email || String(p.email).indexOf('@') < 0) {
+    return { ok: false, error: 'Valid email required' };
+  }
+  if (p.website) return { ok: true }; // honeypot：機器人填了隱藏欄位就默默丟棄
+  const ss = getDb_();
+  let sh = ss.getSheetByName('waitlist');
+  if (!sh) {
+    sh = ss.insertSheet('waitlist');
+    sh.getRange(1, 1, 1, 9).setValues([[
+      'created_at', 'role', 'name', 'email', 'grad_year', 'contact_app', 'contact_id', 'lang', 'notes',
+    ]]).setFontWeight('bold');
+    sh.setFrozenRows(1);
+  }
+  const clip = function (v, n) { return String(v == null ? '' : v).slice(0, n || 200); };
+  sh.appendRow([
+    nowIso_(), clip(p.role, 20), clip(p.name, 80), clip(p.email, 120),
+    clip(p.gradYear, 10), clip(p.contactApp, 20), clip(p.contactId, 80),
+    clip(p.lang, 10), clip(p.notes, 500),
+  ]);
+  return { ok: true };
 }
