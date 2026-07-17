@@ -165,3 +165,13 @@ function genLoginCode_() {
   for (let i = 0; i < 8; i++) s += chars.charAt(Math.floor(Math.random() * chars.length));
   return s;
 }
+
+/** 手動快速新增單一普高測試學生 */
+function addTestStudentGeneral() {
+  const sh = getSheet_(CONFIG.SHEETS.students);
+  const now = nowIso_();
+  const id = 'S' + String(sh.getLastRow()).padStart(6, '0');
+  const code = genLoginCode_();
+  sh.appendRow([id, '測試學生（普高）', 'general', '台中一中', 11, '普高A班', '', code, '["台大資工"]', 'active', now, now]);
+  Logger.log('普高測試學生建立完成 → student_id: ' + id + '，login_code: ' + code);
+}
