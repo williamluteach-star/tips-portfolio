@@ -180,7 +180,7 @@ function Dashboard({ student }) {
       </div>
       <p className="hint">空格＝該學期還沒有素材。<span className="hl">課程學習成果只能在修課當學期上傳學校平台＋老師認證，逾期無法補件</span>（只在高一開的課，就只能在高一上傳）；多元表現則可跨學年補傳。</p>
 
-      <QuotaBar bySemester={data.bySemester} />
+      <QuotaBar bySemester={data.bySemester} schoolType={student.school_type} />
 
       <p className="hint">
         每個校系參採的項目都不一樣，挑素材前先查目標校系的公告：
@@ -227,7 +227,7 @@ function SemesterGuide({ schoolType }) {
 }
 
 /** 本學年中央資料庫勾選額度提示（課程成果 6／多元 10） */
-function QuotaBar({ bySemester }) {
+function QuotaBar({ bySemester, schoolType }) {
   const ay = currentAcademicYear();
   let course = 0, diverse = 0;
   Object.keys(bySemester || {}).forEach((sem) => {
@@ -239,7 +239,10 @@ function QuotaBar({ bySemester }) {
   return (
     <p className="hint">
       本學年（{ay}）素材累積：課程成果 <b>{course}</b> 件・多元表現 <b>{diverse}</b> 件
-      <br />提醒：每學年勾選中央資料庫上限＝課程成果 <b>6</b> 件、多元表現 <b>10</b> 件（上傳學校平台的數量依各校規定）；大學申請時至多參採 3＋10 件，重點是挑出最好的，不是塞滿。
+      <br />提醒：每學年勾選中央資料庫上限＝課程成果 <b>6</b> 件、多元表現 <b>10</b> 件（上傳學校平台的數量依各校規定）。
+      {schoolType === 'vocational'
+        ? <>四技甄選第二階段的<b>件數由各系自訂（未必是 3＋10）</b>，專題實作 B-1 至少 1 件，請逐系查簡章與指引平台。</>
+        : <>大學個人申請時各校系至多參採 3＋10 件，重點是挑出最好的，不是塞滿。</>}
     </p>
   );
 }
