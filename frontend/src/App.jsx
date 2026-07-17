@@ -41,11 +41,20 @@ const GUIDE = {
   },
 };
 
+/**
+ * 目前學年（民國學年度），由日期自動計算。
+ * 每年 7/1 切換到新學年 — 配合暑假維護名單的節奏：
+ * 每年 7 月請把 students 分頁的 grade 全部 +1（畢業生把 status 改 inactive）。
+ */
+function currentAcademicYear() {
+  const now = new Date();
+  const roc = now.getFullYear() - 1911;
+  return now.getMonth() + 1 >= 7 ? roc : roc - 1;
+}
+
 /** 由年級推算學生的六個學期代碼（例：11年級、115學年 → 114-1 起共六格） */
 function semestersFor(grade) {
-  // 目前學年：2026-07 → 115 學年即將開始；以入學學年回推
-  const currentAcademicYear = 115;
-  const entryYear = currentAcademicYear - (Number(grade) - 10);
+  const entryYear = currentAcademicYear() - (Number(grade) - 10);
   const list = [];
   for (let y = 0; y < 3; y++) for (let s = 1; s <= 2; s++) list.push(`${entryYear + y}-${s}`);
   return list;

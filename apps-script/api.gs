@@ -18,6 +18,11 @@ function doPost(e) {
     return json_({ ok: false, error: '請求格式錯誤' });
   }
 
+  // LINE Webhook 事件（body 帶 events 陣列，與平台 API 分流）
+  if (req && Array.isArray(req.events)) {
+    return handleLineWebhook_(req);
+  }
+
   try {
     switch (req.action) {
       case 'login':          return json_(login_(req.payload));

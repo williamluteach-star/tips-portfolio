@@ -81,7 +81,7 @@ function seedDeadlines_(ss) {
     [shortId_('D'), 'global', '', 'all', 0, '115-1', 'upload_course_result',
       '課程學習成果上傳＋送出認證截止', '2027-02-02T17:00:00+08:00', '實際日期依各校公告，請至老師後台修改', now, now],
     [shortId_('D'), 'global', '', 'all', 0, '115-1', 'check_to_central',
-      '勾選課程學習成果／多元表現至中央資料庫', '2027-02-26T17:00:00+08:00', '課程成果每學年至多3件、多元表現至多10件', now, now],
+      '勾選課程學習成果／多元表現至中央資料庫', '2027-02-26T17:00:00+08:00', '每學年可勾選課程成果 6 件、多元表現 10 件；申請時大學至多參採 3＋10 件', now, now],
   ];
   sh.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
 }

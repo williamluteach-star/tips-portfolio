@@ -80,3 +80,141 @@ function formatDate_(iso) {
   const d = new Date(iso);
   return (d.getMonth() + 1) + '/' + d.getDate() + '（' + '日一二三四五六'.charAt(d.getDay()) + '）';
 }
+
+
+/* ---------------- W4：LINE Webhook（綁定＋查詢時程） ---------------- */
+
+/**
+ * LINE Webhook 事件處理（由 api.gs 的 doPost 分流進來）。
+ * 綁定：學生傳「學號 登入代碼」（例：S000123 ABCD2345）→ 自動記錄 line_user_id。
+ * 指令：「我的時程」查 90 天內截止日；「解除綁定」清除連結。
+ */
+function handleLineWebhook_(body) {
+  (body.events || []).forEach(function (ev) {
+    try {
+      if (ev.type === 'follow') {
+        replyLine_(ev.replyToken, welcomeText_());
+      } else if (ev.type === 'message' && ev.message && ev.message.type === 'text') {
+        handleLineText_(ev);
+      }
+    } catch (err) {
+      Logger.log('LINE webhook 事件錯誤：' + err);
+    }
+  });
+  return json_({ ok: true });
+}
+
+function welcomeText_() {
+  return '歡迎加入 TIPS 學習歷程平台 📚\n\n請輸入「學號 登入代碼」完成綁定（中間空一格），例如：\nS000123 ABCD2345\n\n綁定後重要截止日會自動提醒你，也可以隨時輸入「我的時程」查詢。';
+}
+
+function handleLineText_(ev) {
+  const uid = ev.source && ev.source.userId;
+  const raw = String(ev.message.text || '').trim();
+  const text = raw.toUpperCase();
+
+  // 1) 綁定：「學號 代碼」
+  const m = text.match(/^(S\d{6})[\s,，]+([A-Z0-9]{8})$/);
+  if (m) return replyLine_(ev.replyToken, bindLine_(uid, m[1], m[2]));
+
+  // 只給學號沒給代碼
+  if (/^S\d{6}$/.test(text)) {
+    return replyLine_(ev.replyToken, '還差一步！請把學號和登入代碼一起傳（中間空一格），例如：\n' + text + ' ABCD2345');
+  }
+
+  // 2) 查詢時程
+  if (raw.indexOf('時程') >= 0) {
+    return replyLine_(ev.replyToken, scheduleText_(uid));
+  }
+
+  // 3) 解除綁定
+  if (raw.indexOf('解除綁定') >= 0) {
+    return replyLine_(ev.replyToken, unbindLine_(uid));
+  }
+
+  // 4) 其他 → 使用說明
+  replyLine_(ev.replyToken, '你可以這樣使用：\n▸ 傳「學號 登入代碼」完成綁定\n▸ 傳「我的時程」查看 90 天內截止日\n▸ 傳「解除綁定」取消連結\n\n開啟平台：https://portfolio.tips-edu.com');
+}
+
+function bindLine_(uid, studentId, code) {
+  if (!uid) return '無法取得你的 LINE 識別碼，請稍後再試。';
+  const loc = locateRow_(CONFIG.SHEETS.students, 'student_id', studentId);
+  if (!loc || String(loc.record.login_code).toUpperCase() !== code) return '學號或登入代碼錯誤，請再確認一次。';
+  const sh = getSheet_(CONFIG.SHEETS.students);
+  const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  sh.getRange(loc.rowIndex, headers.indexOf('line_user_id') + 1).setValue(uid);
+  sh.getRange(loc.rowIndex, headers.indexOf('updated_at') + 1).setValue(nowIso_());
+  return '綁定成功 🎉 ' + loc.record.name + ' 同學，之後重要截止日會自動提醒你。\n\n隨時輸入「我的時程」查看接下來的重要日期。';
+}
+
+function unbindLine_(uid) {
+  const loc = uid ? locateRow_(CONFIG.SHEETS.students, 'line_user_id', uid) : null;
+  if (!loc) return '你目前沒有綁定任何帳號。';
+  const sh = getSheet_(CONFIG.SHEETS.students);
+  const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  sh.getRange(loc.rowIndex, headers.indexOf('line_user_id') + 1).setValue('');
+  return '已解除綁定。想重新綁定時，再傳「學號 登入代碼」即可。';
+}
+
+function scheduleText_(uid) {
+  const student = uid ? findRow_(CONFIG.SHEETS.students, 'line_user_id', uid) : null;
+  if (!student) return '你還沒完成綁定～請先傳「學號 登入代碼」（中間空一格），例如：S000123 ABCD2345';
+  const deadlines = upcomingDeadlines_(student, 90);
+  if (!deadlines.length) return '接下來 90 天沒有截止日，可以安心累積素材 ✍️';
+  const lines = deadlines.map(function (d) { return '▸ ' + formatDate_(d.due_at) + '　' + d.title; });
+  return '📅 ' + student.name + ' 同學，接下來 90 天的重要時程：\n\n' + lines.join('\n') + '\n\n細節請到平台查看：https://portfolio.tips-edu.com';
+}
+
+/** Reply API（免費，不計推播額度） */
+function replyLine_(replyToken, text) {
+  if (!CONFIG.LINE_CHANNEL_ACCESS_TOKEN || !replyToken) return;
+  UrlFetchApp.fetch('https://api.line.me/v2/bot/message/reply', {
+    method: 'post',
+    contentType: 'application/json',
+    headers: { Authorization: 'Bearer ' + CONFIG.LINE_CHANNEL_ACCESS_TOKEN },
+    payload: JSON.stringify({ replyToken: replyToken, messages: [{ type: 'text', text: String(text) }] }),
+    muteHttpExceptions: true,
+  });
+}
+
+/* ---------------- W4：圖文選單 ---------------- */
+
+/**
+ * 建立圖文選單並設為所有好友的預設選單。前端部署 richmenu.png 後執行一次即可。
+ * 左半邊＝傳「我的時程」；右半邊＝開啟平台網站。
+ */
+function setupRichMenu() {
+  const token = CONFIG.LINE_CHANNEL_ACCESS_TOKEN;
+  if (!token) throw new Error('尚未設定 LINE_TOKEN');
+
+  const menu = {
+    size: { width: 2500, height: 843 },
+    selected: true,
+    name: 'TIPS 主選單',
+    chatBarText: '功能選單',
+    areas: [
+      { bounds: { x: 0, y: 0, width: 1250, height: 843 }, action: { type: 'message', text: '我的時程' } },
+      { bounds: { x: 1250, y: 0, width: 1250, height: 843 }, action: { type: 'uri', uri: 'https://portfolio.tips-edu.com' } },
+    ],
+  };
+  const created = JSON.parse(UrlFetchApp.fetch('https://api.line.me/v2/bot/richmenu', {
+    method: 'post', contentType: 'application/json',
+    headers: { Authorization: 'Bearer ' + token },
+    payload: JSON.stringify(menu),
+  }).getContentText());
+  const menuId = created.richMenuId;
+  Logger.log('已建立圖文選單：' + menuId);
+
+  const img = UrlFetchApp.fetch('https://portfolio.tips-edu.com/richmenu.png').getBlob();
+  UrlFetchApp.fetch('https://api-data.line.me/v2/bot/richmenu/' + menuId + '/content', {
+    method: 'post', contentType: 'image/png',
+    headers: { Authorization: 'Bearer ' + token },
+    payload: img,
+  });
+  Logger.log('圖片上傳完成');
+
+  UrlFetchApp.fetch('https://api.line.me/v2/bot/user/all/richmenu/' + menuId, {
+    method: 'post', headers: { Authorization: 'Bearer ' + token },
+  });
+  Logger.log('✅ 圖文選單已設為所有好友的預設選單。');
+}
