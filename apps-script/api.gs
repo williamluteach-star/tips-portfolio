@@ -138,20 +138,21 @@ function teacherOverview_() {
 
   const byStudent = {};
   artifacts.forEach(function (a) {
-    if (!byStudent[a.student_id]) byStudent[a.student_id] = { course: 0, diverse: 0, last: '' };
+    if (!byStudent[a.student_id]) byStudent[a.student_id] = { course: 0, diverse: 0, editing: 0, last: '' };
     const b = byStudent[a.student_id];
     if (a.category === 'course_result') b.course++; else b.diverse++;
+    if (a.is_uploaded_to_school === 'editing') b.editing++;
     if (String(a.created_at) > String(b.last)) b.last = a.created_at;
   });
 
   const rows = students.map(function (s) {
-    const b = byStudent[s.student_id] || { course: 0, diverse: 0, last: '' };
+    const b = byStudent[s.student_id] || { course: 0, diverse: 0, editing: 0, last: '' };
     return {
       student_id: s.student_id, name: s.name, school_type: s.school_type,
       school_name: s.school_name, grade: s.grade, class_group: s.class_group,
       status: s.status, has_line: !!s.line_user_id,
       course: b.course, diverse: b.diverse, total: b.course + b.diverse,
-      last_created_at: b.last,
+      editing: b.editing, last_created_at: b.last,
     };
   });
   return { ok: true, data: rows };

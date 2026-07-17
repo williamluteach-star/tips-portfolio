@@ -76,6 +76,9 @@ function daysUntil(iso) {
 export default function App() {
   const [student, setStudent] = useState(null);
   const [tab, setTab] = useState('dashboard');
+  const [quickAdd, setQuickAdd] = useState(false);
+
+  function goQuickAdd() { setQuickAdd(true); setTab('artifacts'); }
 
   if (!student) return <Login onDone={(u) => { setStudent(u); setTab(u.role === 'teacher' ? 'students' : 'dashboard'); }} />;
 
@@ -93,8 +96,8 @@ export default function App() {
         <button onClick={() => { setToken(null); setStudent(null); }}>登出</button>
       </header>
 
-      {!isTeacher && tab === 'dashboard' && <Dashboard student={student} />}
-      {!isTeacher && tab === 'artifacts' && <Artifacts student={student} />}
+      {!isTeacher && tab === 'dashboard' && <Dashboard student={student} onQuickAdd={goQuickAdd} />}
+      {!isTeacher && tab === 'artifacts' && <Artifacts student={student} autoOpen={quickAdd} onAutoOpenDone={() => setQuickAdd(false)} />}
       {!isTeacher && tab === 'timeline' && <Timeline />}
       {isTeacher && tab === 'students' && <TeacherStudents />}
       {isTeacher && tab === 'deadlines' && <TeacherDeadlines />}
@@ -150,7 +153,7 @@ function Login({ onDone }) {
 
 /* ============ 總覽：三年學期格子 ============ */
 
-function Dashboard({ student }) {
+function Dashboard({ student, onQuickAdd }) {
   const [data, setData] = useState(null);
   const [err, setErr] = useState('');
   const semesters = useMemo(() => semestersFor(student.grade), [student.grade]);
@@ -164,6 +167,8 @@ function Dashboard({ student }) {
 
   return (
     <>
+      <button className="btn cta-big" onClick={onQuickAdd}>📸 快拍存素材（30 秒搞定）</button>
+
       <h2>三年進度 <span className="hl">共 {data.total} 件素材</span></h2>
       <div className="sem-grid">
         {semesters.map((sem) => {
@@ -336,17 +341,89 @@ function SynthesisCoach() {
   );
 }
 
+/* ============ 校內平台狀態＋上傳包 ============ */
+
+const SCHOOL_STATUS = [
+  ['', '未上傳校內'],
+  ['editing', '編輯中'],
+  ['submitted', '已送認證'],
+  ['certified', '認證成功'],
+];
+
+function ArtifactPack({ artifact, onChanged }) {
+  const [open, setOpen] = useState(false);
+  const [summary, setSummary] = useState(artifact.summary_100 || '');
+  const [status, setStatus] = useState(artifact.is_uploaded_to_school || '');
+  const [checked, setChecked] = useState(!!artifact.is_checked_to_central && artifact.is_checked_to_central !== 'false');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  async function save(patch, okMsg) {
+    setBusy(true); setMsg('');
+    try { await api('updateArtifact', { artifact_id: artifact.artifact_id, ...patch }); setMsg(okMsg); onChanged && onChanged(); }
+    catch (e) { setMsg(e.message); }
+    finally { setBusy(false); }
+  }
+
+  const isCourse = artifact.category === 'course_result';
+
+  return (
+    <div className="pack">
+      <div className="status-row">
+        {SCHOOL_STATUS.map(([val, label]) => (
+          <button key={val} disabled={busy}
+            className={`chip ${status === val ? 'on' : ''} ${val === 'editing' && status === 'editing' ? 'warn' : ''}`}
+            onClick={() => { setStatus(val); save({ is_uploaded_to_school: val }, '狀態已更新'); }}>
+            {label}
+          </button>
+        ))}
+        <label className="chip-check">
+          <input type="checkbox" checked={checked} disabled={busy}
+            onChange={(e) => { setChecked(e.target.checked); save({ is_checked_to_central: e.target.checked }, '已更新'); }} />
+          已勾選中央
+        </label>
+      </div>
+      {status === 'editing' && (
+        <p className="err">⚠️ 停在「編輯中」老師收不到！到校內平台按下「送出認證」後，回來把狀態改成「已送認證」。</p>
+      )}
+
+      <button className="btn-sm" onClick={() => setOpen(!open)}>📦 上傳包{open ? '（收起）' : '——帶去校內平台 2 分鐘搞定'}</button>
+      {open && (
+        <div className="pack-body">
+          <p><b>步驟 1・檔案</b>：{artifact.file_url
+            ? <><a href={artifact.file_url} target="_blank" rel="noreferrer">開啟檔案</a>（下載後上傳到校內平台，已符合 4MB 規格）</>
+            : '這件還沒有附件——可以先補上傳，或直接在校內平台貼文字。'}</p>
+          <p style={{ marginBottom: 4 }}><b>步驟 2・100 字簡述</b>（{summary.length}/100 字）：</p>
+          <textarea rows="3" value={summary} onChange={(e) => setSummary(e.target.value)}
+            placeholder="還沒寫？先按上面的「百字簡述健檢」讓教練幫你。" />
+          <div className="coach-btns">
+            <button className="btn-sm" disabled={busy} onClick={() => save({ summary_100: summary }, '簡述已儲存')}>儲存簡述</button>
+            <button className="btn-sm" disabled={!summary} onClick={() => { navigator.clipboard.writeText(summary); setMsg('已複製，去校內平台貼上！'); }}>複製簡述</button>
+          </div>
+          <p style={{ marginTop: 8 }}><b>步驟 3・{isCourse ? '按「送出認證」' : '送出'}</b>：{isCourse
+            ? '上傳後一定要按「送出認證」！然後回來把上面狀態改成「已送認證」。'
+            : '多元表現免認證，上傳完成後把狀態改成「已送認證」即可。'}</p>
+          {msg && <p className="ok-msg">{msg}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ============ 素材倉庫 ============ */
 
-function Artifacts({ student }) {
+function Artifacts({ student, autoOpen, onAutoOpenDone }) {
   const [list, setList] = useState(null);
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(!!autoOpen);
   const [err, setErr] = useState('');
 
   function reload() {
     api('listArtifacts').then(setList).catch((e) => setErr(e.message));
   }
   useEffect(reload, []);
+  useEffect(() => {
+    if (autoOpen) { setShowForm(true); onAutoOpenDone && onAutoOpenDone(); }
+  }, [autoOpen]);
 
   async function remove(id) {
     if (!confirm('確定要刪除這件素材嗎？（30 天內可請老師復原）')) return;
@@ -379,6 +456,7 @@ function Artifacts({ student }) {
           <div className="a-meta">{a.semester}｜{a.subcategory}{a.subject_or_event ? `｜${a.subject_or_event}` : ''}</div>
           {a.quick_note && <p className="a-note">{a.quick_note}</p>}
           {a.file_url && <p className="a-note"><a href={a.file_url} target="_blank" rel="noreferrer">查看檔案</a>{a.file_size_mb ? `（${a.file_size_mb}MB）` : ''}</p>}
+          <ArtifactPack artifact={a} />
           <ArtifactCoach artifact={a} />
           <button className="a-del" onClick={() => remove(a.artifact_id)}>刪除</button>
         </article>
@@ -387,13 +465,33 @@ function Artifacts({ student }) {
   );
 }
 
+/** 圖片自動壓縮到規格內（4MB）——研究實證「壓縮地獄」是學生一大痛點，平台代勞 */
+async function compressImage(file, limitMB) {
+  const bmp = await createImageBitmap(file);
+  let scale = Math.min(1, Math.sqrt((limitMB * 1048576 * 0.9) / file.size));
+  for (const q of [0.85, 0.75, 0.6, 0.5]) {
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(bmp.width * scale));
+    canvas.height = Math.max(1, Math.round(bmp.height * scale));
+    canvas.getContext('2d').drawImage(bmp, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', q));
+    if (blob && blob.size <= limitMB * 1048576) {
+      return new File([blob], file.name.replace(/\.(png|jpg|jpeg)$/i, '') + '.jpg', { type: 'image/jpeg' });
+    }
+    scale *= 0.8;
+  }
+  return null;
+}
+
 function ArtifactForm({ student, onSaved }) {
   const semesters = useMemo(() => semestersFor(student.grade), [student.grade]);
+  const nowSem = currentSemester();
   const [form, setForm] = useState({
     title: '', category: 'course_result', subcategory: SUBCATS.course_result[0],
-    semester: semesters[0], subject_or_event: '', quick_note: '',
+    semester: semesters.includes(nowSem) ? nowSem : semesters[0], subject_or_event: '', quick_note: '',
   });
   const [file, setFile] = useState(null);
+  const [more, setMore] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
@@ -408,20 +506,28 @@ function ArtifactForm({ student, onSaved }) {
     try {
       let filePart = {};
       if (file) {
-        const fname = file.name.toLowerCase();
-        const isMedia = /\.(mp3|mp4)$/.test(fname);
-        const isDoc = /\.(pdf|jpg|jpeg|png)$/.test(fname);
+        let f = file;
+        const fname0 = f.name.toLowerCase();
+        const isMedia = /\.(mp3|mp4)$/.test(fname0);
+        const isImage = /\.(jpg|jpeg|png)$/.test(fname0);
+        const isDoc = isImage || fname0.endsWith('.pdf');
         if (!isDoc && !isMedia) {
           throw new Error('中央資料庫只收 PDF／JPG／PNG（文件）與 MP3／MP4（影音），請先轉檔再上傳（例：Word 請先另存成 PDF）');
         }
         const limit = isMedia ? 10 : 4;
-        if (file.size / 1048576 > limit) {
-          throw new Error(`檔案超過 ${limit}MB 上限（中央資料庫規範），請先壓縮`);
+        if (f.size / 1048576 > limit) {
+          if (isImage) {
+            setMsg('照片超過 4MB，自動壓縮中…');
+            f = await compressImage(f, 4);
+            if (!f) throw new Error('照片壓不進 4MB，請改用截圖或縮小後再傳');
+          } else {
+            throw new Error(`檔案超過 ${limit}MB 上限（中央資料庫規範），請先壓縮`);
+          }
         }
         setMsg('檔案上傳中…');
-        const base64 = await fileToBase64(file);
-        const up = await api('uploadFile', { base64, filename: file.name, mimeType: file.type });
-        filePart = { file_url: up.file_url, file_size_mb: up.file_size_mb, file_type: isMedia ? 'video_link' : (fname.endsWith('.pdf') ? 'pdf' : 'image') };
+        const base64 = await fileToBase64(f);
+        const up = await api('uploadFile', { base64, filename: f.name, mimeType: f.type });
+        filePart = { file_url: up.file_url, file_size_mb: up.file_size_mb, file_type: isMedia ? 'video_link' : (f.name.toLowerCase().endsWith('.pdf') ? 'pdf' : 'image') };
       }
       await api('createArtifact', { ...form, ...filePart });
       setMsg('已儲存！');
@@ -435,41 +541,51 @@ function ArtifactForm({ student, onSaved }) {
 
   return (
     <div style={{ marginTop: 16 }}>
-      <label htmlFor="f-title">素材名稱</label>
-      <input id="f-title" value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="例：專題製作期中成果" />
+      <p className="hint" style={{ marginTop: 0 }}>只要<b>名稱＋照片</b>就能存，30 秒搞定。分類先用預設值，之後隨時可改。</p>
 
-      <label htmlFor="f-cat">類別</label>
-      <select id="f-cat" value={form.category} onChange={(e) => set('category', e.target.value)}>
-        <option value="course_result">課程學習成果</option>
-        <option value="diverse">多元表現</option>
-      </select>
+      <label htmlFor="f-title">這是什麼？</label>
+      <input id="f-title" value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="例：專題期中成果、英文小論文、園遊會擺攤" />
 
-      <label htmlFor="f-sub">子類</label>
-      <select id="f-sub" value={form.subcategory} onChange={(e) => set('subcategory', e.target.value)}>
-        {SUBCATS[form.category].map((s) => <option key={s}>{s}</option>)}
-      </select>
+      <label htmlFor="f-file">拍照或選檔案（超過 4MB 的照片會自動幫你壓縮）</label>
+      <input id="f-file" type="file" accept=".pdf,.jpg,.jpeg,.png,.mp3,.mp4" capture="environment" onChange={(e) => setFile(e.target.files[0] || null)} />
 
-      <label htmlFor="f-sem">學期</label>
-      <select id="f-sem" value={form.semester} onChange={(e) => set('semester', e.target.value)}>
-        {semesters.map((s) => <option key={s}>{s}</option>)}
-      </select>
-      {form.category === 'course_result' && form.semester !== currentSemester() && (
-        <p className="err">⚠️ 注意：課程學習成果須在<b>修課當學期</b>上傳學校平台並經任課老師認證，逾期無法補件。這裡選了非本學期（本學期是 {currentSemester()}），請確認這件成果當時已在學校平台完成上傳認證，否則只能作為自己的紀錄。</p>
+      <label htmlFor="f-note">一句話速記（選填，之後寫反思會感謝現在的自己）</label>
+      <textarea id="f-note" rows="2" value={form.quick_note} onChange={(e) => set('quick_note', e.target.value)} placeholder="今天做了什麼？卡在哪裡？" />
+
+      <button className="adv-toggle" onClick={() => setMore(!more)}>
+        {more ? '▴ 收起進階設定' : `▾ 進階設定（目前：${form.category === 'course_result' ? '課程成果' : '多元表現'}・${form.subcategory}・${form.semester}）`}
+      </button>
+
+      {more && (
+        <div className="adv-body">
+          <label htmlFor="f-cat">類別</label>
+          <select id="f-cat" value={form.category} onChange={(e) => set('category', e.target.value)}>
+            <option value="course_result">課程學習成果</option>
+            <option value="diverse">多元表現</option>
+          </select>
+
+          <label htmlFor="f-sub">子類</label>
+          <select id="f-sub" value={form.subcategory} onChange={(e) => set('subcategory', e.target.value)}>
+            {SUBCATS[form.category].map((s) => <option key={s}>{s}</option>)}
+          </select>
+
+          <label htmlFor="f-sem">學期</label>
+          <select id="f-sem" value={form.semester} onChange={(e) => set('semester', e.target.value)}>
+            {semesters.map((s) => <option key={s}>{s}</option>)}
+          </select>
+          {form.category === 'course_result' && form.semester !== currentSemester() && (
+            <p className="err">⚠️ 課程學習成果須在<b>修課當學期</b>上傳學校平台＋老師認證，逾期無法補件。你選了非本學期（本學期是 {currentSemester()}），請確認當時已在校內平台完成認證，否則只能當自己的紀錄。</p>
+          )}
+          {form.category === 'diverse' && (
+            <p className="hint">多元表現免教師認證、可跨學年補傳，別忘了每學年勾選中央上限 10 件。</p>
+          )}
+
+          <label htmlFor="f-subj">科目／活動名稱</label>
+          <input id="f-subj" value={form.subject_or_event} onChange={(e) => set('subject_or_event', e.target.value)} placeholder="例：電子學實習、校慶園遊會" />
+        </div>
       )}
-      {form.category === 'diverse' && (
-        <p className="hint">多元表現免教師認證、可跨學年補傳，但別忘了每學年勾選中央上限 10 件。</p>
-      )}
 
-      <label htmlFor="f-subj">科目／活動名稱</label>
-      <input id="f-subj" value={form.subject_or_event} onChange={(e) => set('subject_or_event', e.target.value)} placeholder="例：電子學實習、校慶園遊會" />
-
-      <label htmlFor="f-note">當下心得速記（之後寫反思會感謝現在的自己）</label>
-      <textarea id="f-note" rows="3" value={form.quick_note} onChange={(e) => set('quick_note', e.target.value)} placeholder="今天做了什麼？卡在哪裡？學到什麼？" />
-
-      <label htmlFor="f-file">附件（中央資料庫規格：PDF/JPG/PNG ≤4MB；MP3/MP4 ≤10MB）</label>
-      <input id="f-file" type="file" accept=".pdf,.jpg,.jpeg,.png,.mp3,.mp4" onChange={(e) => setFile(e.target.files[0] || null)} />
-
-      <button className="btn" onClick={submit} disabled={busy}>{busy ? '儲存中…' : '儲存素材'}</button>
+      <button className="btn" onClick={submit} disabled={busy}>{busy ? '儲存中…' : '存進倉庫 ✓'}</button>
       {msg && <p className="ok-msg">{msg}</p>}
       {err && <p className="err">{err}</p>}
     </div>
@@ -509,7 +625,7 @@ function TeacherStudents() {
           <thead>
             <tr>
               <th>學號</th><th>姓名</th><th>學校</th><th>年級</th><th>學制</th>
-              <th>成果</th><th>多元</th><th>合計</th><th>最近上傳</th><th>LINE</th>
+              <th>成果</th><th>多元</th><th>合計</th><th>卡編輯中</th><th>最近上傳</th><th>LINE</th>
             </tr>
           </thead>
           <tbody>
@@ -523,6 +639,7 @@ function TeacherStudents() {
                 <td>{r.course}</td>
                 <td>{r.diverse}</td>
                 <td><strong>{r.total}</strong></td>
+                <td>{r.editing ? <span className="err" style={{ margin: 0 }}>{r.editing}</span> : '—'}</td>
                 <td className="mono">{r.last_created_at ? String(r.last_created_at).slice(0, 10) : '—'}</td>
                 <td>{r.has_line ? '✓' : '✗'}</td>
               </tr>

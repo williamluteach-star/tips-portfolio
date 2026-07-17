@@ -24,27 +24,41 @@ function sendWeeklyDigestIfNeeded() {
 function sendDigest_(daysAhead) {
   const students = readAll_(CONFIG.SHEETS.students)
     .filter(function (s) { return s.status === 'active' && s.line_user_id; });
+  const artsAll = readAll_(CONFIG.SHEETS.artifacts)
+    .filter(function (a) { return !a.deleted_at; });
 
   let sent = 0;
   students.forEach(function (student) {
     const deadlines = upcomingDeadlines_(student, daysAhead);
-    if (!deadlines.length) return;
-    let text;
-    if (daysAhead > 7) {
-      const lines = deadlines.map(function (d) {
-        return '▸ ' + formatDate_(d.due_at) + '　' + d.title;
-      });
-      text = '📚 ' + student.name + ' 同學，本月學習歷程重要時程：\n\n' +
-        lines.join('\n') +
-        '\n\n📌 打開平台查看細節與你的素材進度。錯過勾選截止日，資料將無法送交審查，請務必留意！';
+    // 「編輯中」警報：研究實證最高頻失誤＝上傳後忘按「送出認證」，老師收不到
+    const editing = artsAll.filter(function (a) {
+      return a.student_id === student.student_id && a.is_uploaded_to_school === 'editing';
+    }).length;
+    if (!deadlines.length && !editing) return;
+
+    let text = '';
+    if (deadlines.length) {
+      if (daysAhead > 7) {
+        const lines = deadlines.map(function (d) {
+          return '▸ ' + formatDate_(d.due_at) + '　' + d.title;
+        });
+        text = '📚 ' + student.name + ' 同學，本月學習歷程重要時程：\n\n' +
+          lines.join('\n') +
+          '\n\n📌 打開平台看你的素材進度——現在存一件，高三就少熬一夜。';
+      } else {
+        const lines = deadlines.map(function (d) {
+          return '⏰ ' + formatDate_(d.due_at) + '　' + d.title;
+        });
+        text = '❗ 一週內截止提醒\n\n' + lines.join('\n') + '\n\n還沒完成的項目請把握時間！';
+      }
     } else {
-      const lines = deadlines.map(function (d) {
-        return '⏰ ' + formatDate_(d.due_at) + '　' + d.title;
-      });
-      text = '❗ 一週內截止提醒\n\n' + lines.join('\n') + '\n\n還沒完成的項目請把握時間！';
+      text = '📚 ' + student.name + ' 同學，小提醒：';
+    }
+    if (editing) {
+      text += '\n\n⚠️ 你有 ' + editing + ' 件素材在校內平台還停在「編輯中」——老師收不到！記得按「送出認證」，然後回平台更新狀態。';
     }
     const ok = pushLine_(student.line_user_id, text);
-    logReminder_(student.student_id, deadlines[0].deadline_id, daysAhead > 7 ? 30 : 7, ok);
+    logReminder_(student.student_id, deadlines.length ? deadlines[0].deadline_id : 'editing_alert', daysAhead > 7 ? 30 : 7, ok);
     if (ok) sent++;
   });
   return sent;

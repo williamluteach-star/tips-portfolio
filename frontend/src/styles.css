@@ -195,3 +195,30 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
   font-family: var(--font-body); font-size: 0.88rem; line-height: 1.7;
   margin-bottom: 10px;
 }
+
+/* ---------- 無痛上傳改版（研究導入） ---------- */
+.cta-big {
+  width: 100%; font-size: 1.12rem; padding: 18px; margin-bottom: 20px;
+  box-shadow: 4px 4px 0 var(--mark);
+}
+.adv-toggle {
+  background: none; border: none; color: var(--graphite); font-size: 0.85rem;
+  cursor: pointer; padding: 8px 0; display: block; font-family: var(--font-body);
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.adv-body { border-left: 3px solid var(--rule); padding-left: 12px; margin-bottom: 8px; }
+.pack { margin-top: 10px; }
+.status-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 8px; }
+.chip {
+  border: 1.5px solid var(--rule); background: var(--paper); color: var(--graphite);
+  border-radius: 999px; padding: 3px 12px; font-size: 0.78rem; font-weight: 700;
+  cursor: pointer; font-family: var(--font-body);
+}
+.chip.on { border-color: var(--ink); background: var(--mark); color: var(--ink); }
+.chip.on.warn { background: #ffd9d4; border-color: var(--alert); color: var(--alert); }
+.chip-check { font-size: 0.78rem; font-weight: 700; color: var(--graphite); display: flex; align-items: center; gap: 4px; }
+.pack-body {
+  background: #fff; border: 1.5px solid var(--rule); border-radius: var(--radius);
+  padding: 14px 16px; margin-top: 8px; font-size: 0.9rem;
+}
+.pack-body textarea { width: 100%; border: 1.5px solid var(--rule); border-radius: 8px; padding: 8px 10px; font-family: var(--font-body); font-size: 0.9rem; }
