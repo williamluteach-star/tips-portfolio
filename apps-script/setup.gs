@@ -9,6 +9,9 @@ const SCHEMA = {
     'student_id', 'name', 'school_type', 'school_name', 'grade', 'class_group',
     'line_user_id', 'login_code', 'target_majors', 'status', 'created_at', 'updated_at',
   ],
+  teachers: [
+    'teacher_id', 'name', 'email', 'login_code', 'status', 'created_at', 'updated_at',
+  ],
   artifacts: [
     'artifact_id', 'student_id', 'title', 'category', 'subcategory', 'semester',
     'subject_or_event', 'file_url', 'file_type', 'file_size_mb', 'quick_note',
@@ -89,7 +92,9 @@ function seedDeadlines_(ss) {
  * 用法：addStudentsFromSheet('來源試算表ID', '分頁名稱')
  */
 function addStudentsFromSheet(srcSpreadsheetId, srcSheetName) {
-  const src = SpreadsheetApp.openById(srcSpreadsheetId).getSheetByName(srcSheetName);
+  const srcSs = SpreadsheetApp.openById(srcSpreadsheetId);
+  const src = srcSheetName ? srcSs.getSheetByName(srcSheetName) : srcSs.getSheets()[0];
+  if (!src) throw new Error('找不到來源分頁：' + srcSheetName);
   const data = src.getDataRange().getValues();
   const sh = getSheet_(CONFIG.SHEETS.students);
   const startRow = sh.getLastRow() + 1;
@@ -101,7 +106,7 @@ function addStudentsFromSheet(srcSpreadsheetId, srcSheetName) {
     out.push([
       'S' + String(startRow + out.length - 1).padStart(6, '0'),
       name,
-      schoolType || 'general',
+      normalizeSchoolType_(schoolType),
       schoolName || '',
       grade || 10,
       classGroup || '',
@@ -114,6 +119,34 @@ function addStudentsFromSheet(srcSpreadsheetId, srcSheetName) {
   }
   if (out.length) sh.getRange(startRow, 1, out.length, out[0].length).setValues(out);
   Logger.log('已匯入 ' + out.length + ' 位學生。登入代碼請見 students 分頁 login_code 欄。');
+}
+
+/** 學制正規化：中文或英文輸入 → general / vocational */
+function normalizeSchoolType_(v) {
+  const s = String(v || '').trim().toLowerCase();
+  if (s === 'vocational' || s === '高職' || s === '技高' || s === '技術型' || s === '技術型高中') return 'vocational';
+  return 'general';
+}
+
+/** 一鍵匯入：William 的「高中生名單」試算表 */
+function importStudents_20260716() {
+  addStudentsFromSheet('12ArqUOLDCtf4uG3qinpttjEL9KoIVvhP2d5PYgJReCQ');
+}
+
+/**
+ * 新增老師帳號（W3 老師後台）。
+ * 用法：在編輯器執行 addTeacher()（預設 William），或改參數後執行。
+ * 老師以 teacher_id（T 開頭）＋登入代碼登入前端，自動進入老師後台。
+ */
+function addTeacher(name, email) {
+  name = name || 'William';
+  email = email || 'williamluteach@gmail.com';
+  const sh = getSheet_(CONFIG.SHEETS.teachers);
+  const now = nowIso_();
+  const id = 'T' + String(sh.getLastRow()).padStart(6, '0');
+  const code = genLoginCode_();
+  sh.appendRow([id, name, email, code, 'active', now, now]);
+  Logger.log('老師帳號建立完成 → teacher_id: ' + id + '，login_code: ' + code);
 }
 
 /** 手動快速新增單一學生（測試用） */

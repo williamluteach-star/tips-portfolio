@@ -10,37 +10,44 @@
  */
 
 function sendMonthlyDigest() {
-  const students = readAll_(CONFIG.SHEETS.students)
-    .filter(function (s) { return s.status === 'active' && s.line_user_id; });
-
-  students.forEach(function (student) {
-    const deadlines = upcomingDeadlines_(student, 31);
-    if (!deadlines.length) return;
-    const lines = deadlines.map(function (d) {
-      return '▸ ' + formatDate_(d.due_at) + '　' + d.title;
-    });
-    const text = '📚 ' + student.name + ' 同學，本月學習歷程重要時程：\n\n' +
-      lines.join('\n') +
-      '\n\n📌 打開平台查看細節與你的素材進度。錯過勾選截止日，資料將無法送交審查，請務必留意！';
-    const ok = pushLine_(student.line_user_id, text);
-    logReminder_(student.student_id, deadlines[0].deadline_id, 30, ok);
-  });
+  sendDigest_(31);
 }
 
 function sendWeeklyDigestIfNeeded() {
+  sendDigest_(7);
+}
+
+/**
+ * 共用彙整發送核心：daysAhead=31 月報、7 週報。
+ * 回傳實際發送則數（供老師後台「一鍵補發」顯示）。
+ */
+function sendDigest_(daysAhead) {
   const students = readAll_(CONFIG.SHEETS.students)
     .filter(function (s) { return s.status === 'active' && s.line_user_id; });
 
+  let sent = 0;
   students.forEach(function (student) {
-    const deadlines = upcomingDeadlines_(student, 7);
+    const deadlines = upcomingDeadlines_(student, daysAhead);
     if (!deadlines.length) return;
-    const lines = deadlines.map(function (d) {
-      return '⏰ ' + formatDate_(d.due_at) + '　' + d.title;
-    });
-    const text = '❗ 一週內截止提醒\n\n' + lines.join('\n') + '\n\n還沒完成的項目請把握時間！';
+    let text;
+    if (daysAhead > 7) {
+      const lines = deadlines.map(function (d) {
+        return '▸ ' + formatDate_(d.due_at) + '　' + d.title;
+      });
+      text = '📚 ' + student.name + ' 同學，本月學習歷程重要時程：\n\n' +
+        lines.join('\n') +
+        '\n\n📌 打開平台查看細節與你的素材進度。錯過勾選截止日，資料將無法送交審查，請務必留意！';
+    } else {
+      const lines = deadlines.map(function (d) {
+        return '⏰ ' + formatDate_(d.due_at) + '　' + d.title;
+      });
+      text = '❗ 一週內截止提醒\n\n' + lines.join('\n') + '\n\n還沒完成的項目請把握時間！';
+    }
     const ok = pushLine_(student.line_user_id, text);
-    logReminder_(student.student_id, deadlines[0].deadline_id, 7, ok);
+    logReminder_(student.student_id, deadlines[0].deadline_id, daysAhead > 7 ? 30 : 7, ok);
+    if (ok) sent++;
   });
+  return sent;
 }
 
 function pushLine_(lineUserId, text) {

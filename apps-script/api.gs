@@ -22,7 +22,22 @@ function doPost(e) {
     switch (req.action) {
       case 'login':          return json_(login_(req.payload));
       default: {
-        const student = auth_(req.token);
+        const user = auth_(req.token);
+        // 老師端點
+        if (String(req.action).indexOf('teacher') === 0 || ['saveDeadline', 'removeDeadline', 'resendReminder'].indexOf(req.action) >= 0) {
+          if (user.role !== 'teacher') return json_({ ok: false, error: '此功能僅限老師使用' });
+          switch (req.action) {
+            case 'teacherOverview':   return json_(teacherOverview_());
+            case 'teacherDeadlines':  return json_(teacherDeadlines_());
+            case 'saveDeadline':      return json_(saveDeadline_(req.payload));
+            case 'removeDeadline':    return json_(removeDeadline_(req.payload));
+            case 'resendReminder':    return json_(resendReminder_(req.payload));
+            default: return json_({ ok: false, error: '未知的 action：' + req.action });
+          }
+        }
+        // 學生端點
+        if (user.role !== 'student') return json_({ ok: false, error: '此功能僅限學生使用' });
+        const student = user;
         switch (req.action) {
           case 'me':             return json_({ ok: true, data: student });
           case 'dashboard':      return json_(dashboard_(student));
@@ -54,25 +69,128 @@ function json_(obj) {
 function login_(payload) {
   const { studentId, loginCode } = payload || {};
   if (!studentId || !loginCode) return { ok: false, error: '請輸入學號與登入代碼' };
-  const student = findRow_(CONFIG.SHEETS.students, 'student_id', String(studentId).trim().toUpperCase());
-  if (!student || String(student.login_code) !== String(loginCode).trim().toUpperCase()) {
+  const id = String(studentId).trim().toUpperCase();
+  const code = String(loginCode).trim().toUpperCase();
+
+  // 老師：T 開頭帳號
+  if (id.charAt(0) === 'T') {
+    const teacher = findRow_(CONFIG.SHEETS.teachers, 'teacher_id', id);
+    if (!teacher || String(teacher.login_code) !== code) return { ok: false, error: '帳號或登入代碼錯誤' };
+    if (teacher.status !== 'active') return { ok: false, error: '此帳號目前停用' };
+    const token = Utilities.getUuid();
+    CacheService.getScriptCache().put('tok_' + token, 'T:' + teacher.teacher_id, CONFIG.TOKEN_TTL_SECONDS);
+    delete teacher.login_code;
+    teacher.role = 'teacher';
+    return { ok: true, data: { token: token, student: teacher } };
+  }
+
+  const student = findRow_(CONFIG.SHEETS.students, 'student_id', id);
+  if (!student || String(student.login_code) !== code) {
     return { ok: false, error: '學號或登入代碼錯誤' };
   }
   if (student.status !== 'active') return { ok: false, error: '此帳號目前停用，請聯絡老師' };
   const token = Utilities.getUuid();
-  CacheService.getScriptCache().put('tok_' + token, student.student_id, CONFIG.TOKEN_TTL_SECONDS);
+  CacheService.getScriptCache().put('tok_' + token, 'S:' + student.student_id, CONFIG.TOKEN_TTL_SECONDS);
   delete student.login_code;
+  student.role = 'student';
   return { ok: true, data: { token: token, student: student } };
 }
 
 function auth_(token) {
   if (!token) throw new Error('未登入');
-  const sid = CacheService.getScriptCache().get('tok_' + token);
-  if (!sid) throw new Error('登入已過期，請重新登入');
-  const student = findRow_(CONFIG.SHEETS.students, 'student_id', sid);
+  const val = CacheService.getScriptCache().get('tok_' + token);
+  if (!val) throw new Error('登入已過期，請重新登入');
+
+  // 新格式 'T:xxx' / 'S:xxx'；相容舊格式（純 student_id）
+  let role = 'student', id = val;
+  if (val.indexOf('T:') === 0) { role = 'teacher'; id = val.slice(2); }
+  else if (val.indexOf('S:') === 0) { id = val.slice(2); }
+
+  if (role === 'teacher') {
+    const teacher = findRow_(CONFIG.SHEETS.teachers, 'teacher_id', id);
+    if (!teacher) throw new Error('帳號不存在');
+    delete teacher.login_code;
+    teacher.role = 'teacher';
+    return teacher;
+  }
+  const student = findRow_(CONFIG.SHEETS.students, 'student_id', id);
   if (!student) throw new Error('帳號不存在');
   delete student.login_code;
+  student.role = 'student';
   return student;
+}
+
+/* ---------------- 老師後台 ---------------- */
+
+/** 學生進度總表：每位學生的素材統計與最近上傳 */
+function teacherOverview_() {
+  const students = readAll_(CONFIG.SHEETS.students);
+  const artifacts = readAll_(CONFIG.SHEETS.artifacts).filter(function (a) { return !a.deleted_at; });
+
+  const byStudent = {};
+  artifacts.forEach(function (a) {
+    if (!byStudent[a.student_id]) byStudent[a.student_id] = { course: 0, diverse: 0, last: '' };
+    const b = byStudent[a.student_id];
+    if (a.category === 'course_result') b.course++; else b.diverse++;
+    if (String(a.created_at) > String(b.last)) b.last = a.created_at;
+  });
+
+  const rows = students.map(function (s) {
+    const b = byStudent[s.student_id] || { course: 0, diverse: 0, last: '' };
+    return {
+      student_id: s.student_id, name: s.name, school_type: s.school_type,
+      school_name: s.school_name, grade: s.grade, class_group: s.class_group,
+      status: s.status, has_line: !!s.line_user_id,
+      course: b.course, diverse: b.diverse, total: b.course + b.diverse,
+      last_created_at: b.last,
+    };
+  });
+  return { ok: true, data: rows };
+}
+
+/** 全部截止日（含過期，供維護） */
+function teacherDeadlines_() {
+  const rows = readAll_(CONFIG.SHEETS.deadlines)
+    .sort(function (a, b) { return String(a.due_at).localeCompare(String(b.due_at)); });
+  return { ok: true, data: rows };
+}
+
+/** 新增或更新截止日 */
+function saveDeadline_(p) {
+  if (!p || !p.title || !p.due_at) return { ok: false, error: '標題與截止時間為必填' };
+  const now = nowIso_();
+  const sh = getSheet_(CONFIG.SHEETS.deadlines);
+  const record = [
+    p.scope || 'global', p.school_name || '', p.school_type || 'all',
+    Number(p.grade) || 0, p.semester || '', p.task_type || 'other',
+    p.title, p.due_at, p.note || '',
+  ];
+  if (p.deadline_id) {
+    const loc = locateRow_(CONFIG.SHEETS.deadlines, 'deadline_id', p.deadline_id);
+    if (!loc) return { ok: false, error: '找不到這筆截止日' };
+    sh.getRange(loc.rowIndex, 2, 1, record.length).setValues([record]);
+    sh.getRange(loc.rowIndex, 12).setValue(now); // updated_at
+    return { ok: true, data: { deadline_id: p.deadline_id } };
+  }
+  const id = shortId_('D');
+  sh.appendRow([id].concat(record, [now, now]));
+  return { ok: true, data: { deadline_id: id } };
+}
+
+/** 刪除截止日 */
+function removeDeadline_(p) {
+  if (!p || !p.deadline_id) return { ok: false, error: '缺少 deadline_id' };
+  const loc = locateRow_(CONFIG.SHEETS.deadlines, 'deadline_id', p.deadline_id);
+  if (!loc) return { ok: false, error: '找不到這筆截止日' };
+  getSheet_(CONFIG.SHEETS.deadlines).deleteRow(loc.rowIndex);
+  return { ok: true };
+}
+
+/** 一鍵補發提醒：days=7 補發週報、days=31 補發月報 */
+function resendReminder_(p) {
+  const days = Number(p && p.days) || 7;
+  const sent = sendDigest_(days);
+  return { ok: true, data: { sent: sent } };
 }
 
 /* ---------------- 儀表板 ---------------- */

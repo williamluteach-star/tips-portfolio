@@ -25,6 +25,7 @@ const CONFIG = {
   // 資料表分頁名稱
   SHEETS: {
     students: 'students',
+    teachers: 'teachers',
     artifacts: 'artifacts',
     deadlines: 'deadlines',
     reminders_log: 'reminders_log',

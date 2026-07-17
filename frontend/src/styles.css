@@ -128,7 +128,19 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 }
 .tag.course { background: var(--mark); }
 .tag.diverse { background: var(--ink); color: var(--paper); }
-.a-del { background: none; border: none; color: var(--alert); font-size: 0.78rem; cursor: pointer; text-decoration: underline; margin-top: 8px; }
+.a-del { background: none; border: none; color: var(--alert); font-size: 0.78rem; cursor: pointer; text-decoration: underline; margin-top: 8px; margin-right: 14px; }
+
+/* ---------- 老師後台：學生總表 ---------- */
+.t-scroll { overflow-x: auto; border: 1.5px solid var(--ink); border-radius: var(--radius); background: #fff; }
+.t-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 640px; }
+.t-table th {
+  text-align: left; font-size: 0.75rem; color: var(--graphite);
+  padding: 10px 10px; border-bottom: 2px solid var(--ink); white-space: nowrap;
+}
+.t-table td { padding: 9px 10px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+.t-table tr:last-child td { border-bottom: none; }
+.t-table .mono { font-family: var(--font-mono); font-size: 0.78rem; }
+.t-table .warn-row td { color: var(--alert); }
 
 /* ---------- 底部分頁列 ---------- */
 .tabbar {

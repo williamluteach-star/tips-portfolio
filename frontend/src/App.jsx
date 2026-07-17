@@ -61,27 +61,31 @@ export default function App() {
   const [student, setStudent] = useState(null);
   const [tab, setTab] = useState('dashboard');
 
-  if (!student) return <Login onDone={setStudent} />;
+  if (!student) return <Login onDone={(u) => { setStudent(u); setTab(u.role === 'teacher' ? 'students' : 'dashboard'); }} />;
+
+  const isTeacher = student.role === 'teacher';
+  const tabs = isTeacher
+    ? [['students', '學生總表'], ['deadlines', '時程管理'], ['reminders', '提醒']]
+    : [['dashboard', '總覽'], ['artifacts', '素材倉庫'], ['timeline', '時程']];
 
   return (
     <div className="shell">
       <header className="topbar">
         <div className="brand">
-          TIPS 學習歷程<small>{student.name}</small>
+          TIPS 學習歷程<small>{student.name}{isTeacher ? '（老師）' : ''}</small>
         </div>
         <button onClick={() => { setToken(null); setStudent(null); }}>登出</button>
       </header>
 
-      {tab === 'dashboard' && <Dashboard student={student} />}
-      {tab === 'artifacts' && <Artifacts student={student} />}
-      {tab === 'timeline' && <Timeline />}
+      {!isTeacher && tab === 'dashboard' && <Dashboard student={student} />}
+      {!isTeacher && tab === 'artifacts' && <Artifacts student={student} />}
+      {!isTeacher && tab === 'timeline' && <Timeline />}
+      {isTeacher && tab === 'students' && <TeacherStudents />}
+      {isTeacher && tab === 'deadlines' && <TeacherDeadlines />}
+      {isTeacher && tab === 'reminders' && <TeacherReminders />}
 
       <nav className="tabbar">
-        {[
-          ['dashboard', '總覽'],
-          ['artifacts', '素材倉庫'],
-          ['timeline', '時程'],
-        ].map(([key, label]) => (
+        {tabs.map(([key, label]) => (
           <button key={key} className={tab === key ? 'active' : ''} onClick={() => setTab(key)}>
             <span>{label}</span>
           </button>
@@ -321,6 +325,229 @@ function ArtifactForm({ student, onSaved }) {
       {msg && <p className="ok-msg">{msg}</p>}
       {err && <p className="err">{err}</p>}
     </div>
+  );
+}
+
+/* ============ 老師後台 ============ */
+
+const TASK_TYPES = {
+  upload_course_result: '課程成果上傳',
+  check_to_central: '勾選中央資料庫',
+  upload_diverse: '多元表現上傳',
+  other: '其他',
+};
+
+function TeacherStudents() {
+  const [rows, setRows] = useState(null);
+  const [err, setErr] = useState('');
+
+  useEffect(() => {
+    api('teacherOverview').then(setRows).catch((e) => setErr(e.message));
+  }, []);
+
+  if (err) return <p className="err">{err}</p>;
+  if (!rows) return <p className="empty-hint">載入中…</p>;
+
+  const noLine = rows.filter((r) => !r.has_line && r.status === 'active').length;
+
+  return (
+    <>
+      <h2>學生進度總表 <span className="hl">共 {rows.length} 位</span></h2>
+      {noLine > 0 && (
+        <p className="hint">⚠️ {noLine} 位學生尚未綁定 LINE（line_user_id 空白），提醒不會發送給他們。</p>
+      )}
+      <div className="t-scroll">
+        <table className="t-table">
+          <thead>
+            <tr>
+              <th>學號</th><th>姓名</th><th>學校</th><th>年級</th><th>學制</th>
+              <th>成果</th><th>多元</th><th>合計</th><th>最近上傳</th><th>LINE</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.student_id} className={r.total === 0 ? 'warn-row' : ''}>
+                <td className="mono">{r.student_id}</td>
+                <td>{r.name}</td>
+                <td>{r.school_name}</td>
+                <td>{r.grade}</td>
+                <td>{r.school_type === 'vocational' ? '技高' : '普高'}</td>
+                <td>{r.course}</td>
+                <td>{r.diverse}</td>
+                <td><strong>{r.total}</strong></td>
+                <td className="mono">{r.last_created_at ? String(r.last_created_at).slice(0, 10) : '—'}</td>
+                <td>{r.has_line ? '✓' : '✗'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="hint">紅字列＝還沒有任何素材的學生，開學初多提醒他們「隨手存」。</p>
+    </>
+  );
+}
+
+function TeacherDeadlines() {
+  const [rows, setRows] = useState(null);
+  const [editing, setEditing] = useState(null); // null=收起, {}=新增, {...}=編輯
+  const [err, setErr] = useState('');
+
+  function reload() {
+    api('teacherDeadlines').then(setRows).catch((e) => setErr(e.message));
+  }
+  useEffect(reload, []);
+
+  async function remove(id) {
+    if (!confirm('確定要刪除這筆截止日嗎？')) return;
+    try { await api('removeDeadline', { deadline_id: id }); reload(); }
+    catch (e) { setErr(e.message); }
+  }
+
+  if (err) return <p className="err">{err}</p>;
+  if (!rows) return <p className="empty-hint">載入中…</p>;
+
+  return (
+    <>
+      <h2>時程管理</h2>
+      <button className="btn" onClick={() => setEditing(editing ? null : {})}>
+        {editing ? '收起表單' : '＋ 新增截止日'}
+      </button>
+      {editing && (
+        <DeadlineForm
+          initial={editing}
+          onSaved={() => { setEditing(null); reload(); }}
+        />
+      )}
+      {rows.length === 0 && <p className="empty-hint">目前沒有截止日。</p>}
+      {rows.map((d) => {
+        const past = new Date(d.due_at) < new Date();
+        return (
+          <article key={d.deadline_id} className="artifact" style={{ marginTop: 14, opacity: past ? 0.55 : 1 }}>
+            <div className="a-head">
+              <span className="a-title">{d.title}</span>
+              <span className={`tag ${past ? '' : 'course'}`}>{past ? '已過期' : TASK_TYPES[d.task_type] || d.task_type}</span>
+            </div>
+            <div className="a-meta">
+              {String(d.due_at).slice(0, 16).replace('T', ' ')}｜
+              {d.school_type === 'all' ? '全部學制' : (d.school_type === 'vocational' ? '技高' : '普高')}｜
+              {Number(d.grade) === 0 ? '全年級' : `${d.grade} 年級`}
+              {d.semester ? `｜${d.semester}` : ''}
+            </div>
+            {d.note && <p className="a-note">{d.note}</p>}
+            <button className="a-del" onClick={() => setEditing(d)}>編輯</button>
+            <button className="a-del" onClick={() => remove(d.deadline_id)}>刪除</button>
+          </article>
+        );
+      })}
+    </>
+  );
+}
+
+function DeadlineForm({ initial, onSaved }) {
+  const [form, setForm] = useState({
+    deadline_id: initial.deadline_id || '',
+    title: initial.title || '',
+    due_at: initial.due_at ? String(initial.due_at).slice(0, 16) : '',
+    task_type: initial.task_type || 'upload_course_result',
+    school_type: initial.school_type || 'all',
+    grade: initial.grade !== undefined && initial.grade !== '' ? String(initial.grade) : '0',
+    semester: initial.semester || '',
+    note: initial.note || '',
+  });
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  function set(k, v) { setForm((f) => ({ ...f, [k]: v })); }
+
+  async function submit() {
+    if (!form.title || !form.due_at) { setErr('標題與截止時間為必填'); return; }
+    setBusy(true); setErr('');
+    try {
+      await api('saveDeadline', {
+        ...form,
+        grade: Number(form.grade),
+        due_at: new Date(form.due_at).toISOString(),
+        scope: 'global',
+      });
+      onSaved();
+    } catch (e) { setErr(e.message); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <div style={{ marginTop: 16 }}>
+      <label htmlFor="d-title">標題</label>
+      <input id="d-title" value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="例：課程學習成果上傳截止" />
+
+      <label htmlFor="d-due">截止時間</label>
+      <input id="d-due" type="datetime-local" value={form.due_at} onChange={(e) => set('due_at', e.target.value)} />
+
+      <label htmlFor="d-type">類型</label>
+      <select id="d-type" value={form.task_type} onChange={(e) => set('task_type', e.target.value)}>
+        {Object.entries(TASK_TYPES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+      </select>
+
+      <label htmlFor="d-st">適用學制</label>
+      <select id="d-st" value={form.school_type} onChange={(e) => set('school_type', e.target.value)}>
+        <option value="all">全部</option>
+        <option value="general">普高</option>
+        <option value="vocational">技高</option>
+      </select>
+
+      <label htmlFor="d-grade">適用年級</label>
+      <select id="d-grade" value={form.grade} onChange={(e) => set('grade', e.target.value)}>
+        <option value="0">全年級</option>
+        <option value="10">10 年級</option>
+        <option value="11">11 年級</option>
+        <option value="12">12 年級</option>
+      </select>
+
+      <label htmlFor="d-sem">學期代碼（選填）</label>
+      <input id="d-sem" value={form.semester} onChange={(e) => set('semester', e.target.value)} placeholder="例：115-1" />
+
+      <label htmlFor="d-note">備註（選填）</label>
+      <textarea id="d-note" rows="2" value={form.note} onChange={(e) => set('note', e.target.value)} />
+
+      <button className="btn" onClick={submit} disabled={busy}>{busy ? '儲存中…' : (form.deadline_id ? '更新截止日' : '新增截止日')}</button>
+      {err && <p className="err">{err}</p>}
+    </div>
+  );
+}
+
+function TeacherReminders() {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+
+  async function send(days, label) {
+    if (!confirm(`確定要立刻補發「${label}」給所有已綁定 LINE 的學生嗎？`)) return;
+    setBusy(true); setMsg(''); setErr('');
+    try {
+      const data = await api('resendReminder', { days });
+      setMsg(`已發送 ${data.sent} 則。${data.sent === 0 ? '（沒有學生綁定 LINE，或該區間內沒有截止日）' : ''}`);
+    } catch (e) { setErr(e.message); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <>
+      <h2>一鍵補發提醒</h2>
+      <p className="hint">
+        排程本來就會自動發（每月 1 日月報、每週一週報）。這裡用於臨時公告新截止日後立即補發。
+        只有 students 分頁填了 line_user_id 的學生會收到。
+      </p>
+      <button className="btn" style={{ marginTop: 18 }} disabled={busy} onClick={() => send(7, '一週內截止提醒')}>
+        補發：7 天內截止提醒（週報格式）
+      </button>
+      <button className="btn btn-ghost" style={{ marginTop: 12 }} disabled={busy} onClick={() => send(31, '本月時程總覽')}>
+        補發：31 天內時程總覽（月報格式）
+      </button>
+      {msg && <p className="ok-msg">{msg}</p>}
+      {err && <p className="err">{err}</p>}
+      <p className="hint" style={{ marginTop: 24 }}>
+        📊 LINE 免費額度：每月 200 則（50 人 × 4 次）。補發也會計入，請留意次數。
+      </p>
+    </>
   );
 }
 
