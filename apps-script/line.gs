@@ -86,6 +86,9 @@ function formatDate_(iso) {
 
 /**
  * LINE Webhook 事件處理（由 api.gs 的 doPost 分流進來）。
+ * 【合併模式 2026-07-17】LINE 的 Webhook URL 指向 tips-notify（Railway），
+ * tips-notify 收到事件後原封轉發一份到本 /exec（見 tips-notify/server.js 的 PORTFOLIO_WEBHOOK_URL）。
+ * 本系統只回應三種明確指令，其餘保持沉默，避免與 tips-notify／OA 自動回應搶 replyToken。
  * 綁定：學生傳「學號 登入代碼」（例：S000123 ABCD2345）→ 自動記錄 line_user_id。
  * 指令：「我的時程」查 90 天內截止日；「解除綁定」清除連結。
  */
@@ -93,7 +96,7 @@ function handleLineWebhook_(body) {
   (body.events || []).forEach(function (ev) {
     try {
       if (ev.type === 'follow') {
-        replyLine_(ev.replyToken, welcomeText_());
+        // 合併模式：加好友歡迎由 tips-notify／OA 官方後台處理，這裡不回覆（避免搶 replyToken）
       } else if (ev.type === 'message' && ev.message && ev.message.type === 'text') {
         handleLineText_(ev);
       }
@@ -132,8 +135,12 @@ function handleLineText_(ev) {
     return replyLine_(ev.replyToken, unbindLine_(uid));
   }
 
-  // 4) 其他 → 使用說明
-  replyLine_(ev.replyToken, '你可以這樣使用：\n▸ 傳「學號 登入代碼」完成綁定\n▸ 傳「我的時程」查看 90 天內截止日\n▸ 傳「解除綁定」取消連結\n\n開啟平台：https://portfolio.tips-edu.com');
+  // 4) 社群連結（圖文選單 FB+IG 格）
+  if (raw.indexOf('社群') >= 0) {
+    return replyLine_(ev.replyToken, 'TIPS 英典教育社群 👇\n\nFacebook：\nhttps://www.facebook.com/tipsedu2022\n\nInstagram：\nhttps://www.instagram.com/tipsedu2022');
+  }
+
+  // 5) 其他文字：保持沉默 — 交給 tips-notify（家長配對、查詢作業）與 OA 自動回應處理
 }
 
 function bindLine_(uid, studentId, code) {
@@ -180,8 +187,9 @@ function replyLine_(replyToken, text) {
 /* ---------------- W4：圖文選單 ---------------- */
 
 /**
- * 建立圖文選單並設為所有好友的預設選單。前端部署 richmenu.png 後執行一次即可。
- * 左半邊＝傳「我的時程」；右半邊＝開啟平台網站。
+ * ⚠️【已停用 2026-07-17】圖文選單改由 OA Manager 後台管理（「20260717學習歷程版」，
+ * 沿用 William 原本的六格選單，下左＝傳「我的時程」、下右＝傳「社群連結」）。
+ * 執行本函式會用 API 選單蓋掉 OA Manager 的選單——任何圖文選單變更都必須先經 William 確認！
  */
 function setupRichMenu() {
   const token = CONFIG.LINE_CHANNEL_ACCESS_TOKEN;
@@ -217,4 +225,30 @@ function setupRichMenu() {
     method: 'post', headers: { Authorization: 'Bearer ' + token },
   });
   Logger.log('✅ 圖文選單已設為所有好友的預設選單。');
+}
+
+/**
+ * 還原原本的圖文選單：解除 API 預設選單綁定並刪除所有 API 建立的選單，
+ * 讓 OA Manager 後台設定的選單重新顯示。
+ * 【規則】任何圖文選單變更都必須先經 William 確認才能執行。
+ */
+function removeRichMenu() {
+  const token = CONFIG.LINE_CHANNEL_ACCESS_TOKEN;
+  if (!token) throw new Error('尚未設定 LINE_TOKEN');
+  const opt = function (method) {
+    return { method: method, headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true };
+  };
+  // 1) 解除「所有好友預設選單」綁定
+  const r1 = UrlFetchApp.fetch('https://api.line.me/v2/bot/user/all/richmenu', opt('delete'));
+  Logger.log('解除預設綁定：HTTP ' + r1.getResponseCode());
+  // 2) 刪除所有由 API 建立的圖文選單（OA Manager 後台做的選單不在此清單，不受影響）
+  const list = JSON.parse(UrlFetchApp.fetch('https://api.line.me/v2/bot/richmenu/list', opt('get')).getContentText());
+  (list.richmenus || []).forEach(function (m) {
+    const r = UrlFetchApp.fetch('https://api.line.me/v2/bot/richmenu/' + m.richMenuId, opt('delete'));
+    Logger.log('刪除 ' + m.richMenuId + '（' + m.name + '）：HTTP ' + r.getResponseCode());
+  });
+  // 3) 確認清空
+  const after = UrlFetchApp.fetch('https://api.line.me/v2/bot/richmenu/list', opt('get')).getContentText();
+  Logger.log('剩餘 API 選單：' + after);
+  Logger.log('✅ 完成。OA Manager 後台的原始圖文選單將重新顯示（手機端可能需重開聊天室）。');
 }
