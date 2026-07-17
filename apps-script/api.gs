@@ -53,6 +53,9 @@ function doPost(e) {
           case 'deleteArtifact': return json_(deleteArtifact_(student, req.payload));
           case 'uploadFile':     return json_(uploadFile_(student, req.payload));
           case 'listDeadlines':  return json_(listDeadlines_(student));
+          case 'aiReflect':      return json_(aiReflect_(student, req.payload));
+          case 'aiSummary':      return json_(aiSummary_(student, req.payload));
+          case 'aiSynthesis':    return json_(aiSynthesis_(student, req.payload));
           default: return json_({ ok: false, error: '未知的 action：' + req.action });
         }
       }

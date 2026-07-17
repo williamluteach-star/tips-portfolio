@@ -210,6 +210,95 @@ function SemesterGuide({ schoolType }) {
   );
 }
 
+/* ============ AI 反思教練（Phase 2） ============ */
+
+function ArtifactCoach({ artifact }) {
+  const [mode, setMode] = useState(null);
+  const [draft, setDraft] = useState(artifact.summary_100 || '');
+  const [out, setOut] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  async function ask(action, payload) {
+    setBusy(true); setErr(''); setOut('');
+    try { const d = await api(action, payload); setOut(d.text); }
+    catch (e) { setErr(e.message); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <div className="coach">
+      <div className="coach-btns">
+        <button className="btn-sm" disabled={busy}
+          onClick={() => { setMode('reflect'); ask('aiReflect', { artifact_id: artifact.artifact_id }); }}>
+          🧑‍🏫 教練引導反思
+        </button>
+        <button className="btn-sm" disabled={busy}
+          onClick={() => setMode(mode === 'summary' ? null : 'summary')}>
+          ✍️ 百字簡述健檢
+        </button>
+      </div>
+      {mode === 'summary' && (
+        <div className="coach-draft">
+          <textarea rows="3" value={draft} onChange={(e) => setDraft(e.target.value)}
+            placeholder="先寫下你的 100 字簡述草稿（幾句話就好），教練才能給建議…" />
+          <button className="btn-sm" disabled={busy || !draft.trim()}
+            onClick={() => ask('aiSummary', { artifact_id: artifact.artifact_id, draft })}>
+            送給教練檢查
+          </button>
+        </div>
+      )}
+      {busy && <p className="empty-hint">教練思考中…（約 10–20 秒）</p>}
+      {err && <p className="err">{err}</p>}
+      {out && (
+        <div className="coach-out">
+          <pre>{out}</pre>
+          <button className="btn-sm" onClick={() => navigator.clipboard.writeText(out)}>複製教練回覆</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SynthesisCoach() {
+  const [open, setOpen] = useState(false);
+  const [focus, setFocus] = useState('');
+  const [out, setOut] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  async function run() {
+    setBusy(true); setErr(''); setOut('');
+    try { const d = await api('aiSynthesis', { focus }); setOut(d.text); }
+    catch (e) { setErr(e.message); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <div className="coach coach-syn">
+      <button className="btn-ghost" onClick={() => setOpen(!open)}>
+        🎓 綜整心得教練{open ? '（收起）' : ''}
+      </button>
+      {open && (
+        <div className="coach-draft">
+          <p className="empty-hint">教練會讀你的整個素材倉庫，幫你找出主題軸線和段落架構（適合高三準備「多元表現綜整心得」，最多 800 字）。</p>
+          <input value={focus} onChange={(e) => setFocus(e.target.value)}
+            placeholder="想強調的方向（選填），例：程式能力的累積" />
+          <button className="btn-sm" disabled={busy} onClick={run}>請教練規劃架構</button>
+          {busy && <p className="empty-hint">教練整理你的三年素材中…（約 20–30 秒）</p>}
+          {err && <p className="err">{err}</p>}
+          {out && (
+            <div className="coach-out">
+              <pre>{out}</pre>
+              <button className="btn-sm" onClick={() => navigator.clipboard.writeText(out)}>複製教練回覆</button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ============ 素材倉庫 ============ */
 
 function Artifacts({ student }) {
@@ -235,6 +324,7 @@ function Artifacts({ student }) {
         {showForm ? '收起表單' : '＋ 新增素材'}
       </button>
       {showForm && <ArtifactForm student={student} onSaved={() => { setShowForm(false); reload(); }} />}
+      <SynthesisCoach />
       {err && <p className="err">{err}</p>}
 
       {list === null && <p className="empty-hint">載入中…</p>}
@@ -252,6 +342,7 @@ function Artifacts({ student }) {
           <div className="a-meta">{a.semester}｜{a.subcategory}{a.subject_or_event ? `｜${a.subject_or_event}` : ''}</div>
           {a.quick_note && <p className="a-note">{a.quick_note}</p>}
           {a.file_url && <p className="a-note"><a href={a.file_url} target="_blank" rel="noreferrer">查看檔案</a>{a.file_size_mb ? `（${a.file_size_mb}MB）` : ''}</p>}
+          <ArtifactCoach artifact={a} />
           <button className="a-del" onClick={() => remove(a.artifact_id)}>刪除</button>
         </article>
       ))}
