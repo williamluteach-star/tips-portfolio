@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>學習歷程三年攻略流程圖（擬真版）｜TIPS 英典教育</title>
+<style>
+:root{
+  --ink:#16233b; --paper:#f7f7f4; --mark:#ffde59; --graphite:#5b6472;
+  --alert:#c93a2e; --rule:#e3e1da; --ok:#1e7d4f; --radius:12px;
+  --font:'Noto Sans TC',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--paper);color:var(--ink);line-height:1.65;padding:28px 16px 60px}
+.wrap{max-width:940px;margin:0 auto}
+h1{font-size:1.6rem;text-align:center;margin-bottom:4px}
+.sub{text-align:center;color:var(--graphite);font-size:.9rem;margin-bottom:26px}
+.hl{background:linear-gradient(transparent 55%,var(--mark) 55%,var(--mark) 92%,transparent 92%);padding:0 2px;font-weight:700}
+
+/* 六階段鏈 */
+.chain-card{background:#fff;border:2px solid var(--ink);border-radius:var(--radius);padding:18px 20px;margin-bottom:16px;box-shadow:4px 4px 0 var(--mark)}
+.chain-card h2{font-size:1.05rem;margin-bottom:12px}
+.chain{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center}
+.chain .step{background:var(--ink);color:var(--paper);border-radius:999px;padding:6px 14px;font-size:.82rem;font-weight:700;white-space:nowrap}
+.chain .step.you{background:var(--mark);color:var(--ink)}
+.chain .arr{color:var(--graphite);font-weight:900}
+.chain-note{font-size:.8rem;color:var(--graphite);margin-top:10px;text-align:center}
+.trap{margin-top:12px;background:#ffd9d4;border:1.5px solid var(--alert);border-radius:8px;padding:10px 14px;font-size:.85rem;color:var(--alert);font-weight:700;text-align:center}
+
+/* 校內窗口＋圖例 */
+.win{background:#fff;border:1.5px solid var(--ink);border-radius:var(--radius);padding:14px 18px;margin-bottom:14px;font-size:.86rem}
+.win b.k{font-family:var(--mono)}
+.legend{background:#eef3fb;border:1.5px dashed var(--ink);border-radius:var(--radius);padding:12px 18px;margin-bottom:30px;font-size:.84rem}
+.legend b{display:inline-block;margin-right:14px;white-space:nowrap;padding:2px 0}
+
+/* 軌別區塊 */
+.track{background:#fff;border:2px solid var(--ink);border-radius:var(--radius);margin-bottom:36px;overflow:hidden}
+.track-head{background:var(--ink);color:var(--paper);padding:14px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.track-head h2{font-size:1.15rem}
+.track-head .goal{font-size:.8rem;background:var(--mark);color:var(--ink);border-radius:999px;padding:3px 12px;font-weight:900}
+.persona{background:#fffbe8;border-bottom:1.5px solid var(--rule);padding:10px 20px;font-size:.86rem}
+.quota-bar{background:var(--paper);border-bottom:1.5px solid var(--rule);padding:8px 20px;font-size:.83rem;text-align:center}
+.quota-bar b{font-family:var(--mono)}
+
+/* 時間軸 */
+.timeline{padding:8px 20px 20px;position:relative}
+.stage{display:flex;gap:16px;position:relative;padding:14px 0}
+.stage:not(:last-child)::before{content:'';position:absolute;left:37px;top:52px;bottom:-14px;width:3px;background:var(--rule)}
+.dot{flex:0 0 76px;text-align:center}
+.dot .yr{display:inline-block;width:70px;background:var(--paper);border:2px solid var(--ink);border-radius:10px;font-family:var(--mono);font-weight:700;font-size:.8rem;padding:6px 0;position:relative;z-index:1}
+.stage.exam .yr{background:var(--alert);border-color:var(--alert);color:#fff}
+.stage-body{flex:1;padding-top:2px;min-width:0}
+.stage-body h3{font-size:.95rem;margin-bottom:4px}
+.stage-body ul{list-style:none;font-size:.85rem}
+.stage-body li{padding:3px 0 3px 18px;position:relative}
+.stage-body li::before{content:'✎';position:absolute;left:0;color:var(--graphite);font-size:.8rem}
+.stage-body li.key::before{content:'★';color:#b8860b}
+.stage-body li.warn{color:var(--alert);font-weight:700}
+.stage-body li.warn::before{content:'⚠';color:var(--alert)}
+.milestone{display:inline-block;background:var(--mark);border-radius:6px;padding:1px 8px;font-size:.78rem;font-weight:900;margin-right:4px}
+.pct{display:inline-block;background:var(--mark);border-radius:6px;font-family:var(--mono);font-size:.72rem;font-weight:700;padding:0 6px;margin-left:4px}
+
+/* 模擬檔案清單 */
+.sim{background:#fbfbf8;border:1.5px solid var(--rule);border-radius:10px;padding:10px 12px;margin-top:8px}
+.sim-head{font-size:.8rem;font-weight:900;margin-bottom:6px}
+.file{display:flex;align-items:center;gap:8px;font-size:.82rem;padding:4px 0;border-top:1px dashed var(--rule);flex-wrap:wrap}
+.file:first-of-type{border-top:none}
+.fico{flex:0 0 auto;font-family:var(--mono);font-size:.62rem;font-weight:700;border-radius:5px;padding:1px 6px;color:#fff}
+.fico.pdf{background:#c93a2e}.fico.jpg{background:#1e7d4f}.fico.mp4{background:#5b6472}
+.fname{font-weight:700;min-width:0}
+.fmeta{color:var(--graphite);font-size:.74rem;font-family:var(--mono)}
+.st{margin-left:auto;font-size:.7rem;font-weight:900;border-radius:999px;padding:1px 9px;white-space:nowrap}
+.st.ok{background:#e3f2e9;color:var(--ok);border:1px solid var(--ok)}
+.st.wait{background:#fff5cc;color:#8a6d00;border:1px solid #d9b500}
+.st.warn{background:#ffd9d4;color:var(--alert);border:1px solid var(--alert)}
+.st.multi{background:#eef3fb;color:var(--ink);border:1px solid var(--ink)}
+
+/* AI 教練介入 */
+.ai{background:#eef3fb;border-left:4px solid var(--ink);border-radius:0 8px 8px 0;padding:8px 12px;margin-top:8px;font-size:.82rem}
+.ai b{color:var(--ink)}
+.ai .q{font-style:italic}
+.feat{display:inline-block;background:var(--ink);color:var(--mark);border-radius:6px;font-size:.72rem;font-weight:900;padding:1px 8px;margin-right:4px;white-space:nowrap}
+
+/* 升學衝刺流程 */
+.final{background:var(--paper);border-top:2px dashed var(--rule);padding:16px 20px}
+.final h3{font-size:.95rem;margin-bottom:10px}
+.flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.flow .f{background:#fff;border:2px solid var(--ink);border-radius:10px;padding:8px 12px;font-size:.82rem;font-weight:700;text-align:center;line-height:1.4}
+.flow .f small{display:block;font-weight:500;color:var(--graphite);font-size:.72rem}
+.flow .f.hot{background:var(--mark)}
+.flow .arr{color:var(--graphite);font-weight:900}
+
+.foot{text-align:center;color:var(--graphite);font-size:.78rem;margin-top:8px}
+.foot b{color:var(--ink)}
+@media print{body{padding:10px}.track{break-inside:avoid}.stage{break-inside:avoid}}
+@media (max-width:560px){.stage{gap:10px}.dot{flex-basis:64px}.dot .yr{width:60px;font-size:.72rem}.st{margin-left:0}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>學習歷程三年攻略流程圖<span style="font-size:1rem">（擬真版）</span></h1>
+  <p class="sub">TIPS 英典教育・學習歷程陪伴平台｜跟著小婕（普高）與阿凱（技高）走完三年</p>
+
+  <div class="chain-card">
+    <h2>每一件素材都要走完這條鏈，才算真的進了中央資料庫</h2>
+    <div class="chain">
+      <span class="step you">① 上傳校內平台</span><span class="arr">→</span>
+      <span class="step you">② 按「送出認證」</span><span class="arr">→</span>
+      <span class="step">③ 老師認證</span><span class="arr">→</span>
+      <span class="step you">④ 學年勾選</span><span class="arr">→</span>
+      <span class="step">⑤ 學校提交</span><span class="arr">→</span>
+      <span class="step">⑥ 中央鎖定</span>
+    </div>
+    <p class="chain-note">黃色＝你要動手的步驟。檔案規格：PDF／JPG／PNG ≤4MB、MP3／MP4 ≤10MB</p>
+    <div class="trap">最常見的失誤：上傳後忘記按「送出認證」，狀態停在「編輯中」＝老師看不到、學期一過就作廢！</div>
+  </div>
+
+  <div class="win">
+    <b>校內平台實際上傳窗口</b>（各校自訂；以新竹高工 114 學年公告為例）：課程學習成果 上學期 <b class="k">9/26–2/3</b>（教師認證至 2/10）、下學期 <b class="k">2/23–7/14</b>（認證至 7/21）；多元表現 <b class="k">9/26–8/15</b> 全年可傳。<span style="color:var(--alert);font-weight:700">高三下全面提前（該校提前到 5/10）</span>——升學要用，等不了期末。
+  </div>
+
+  <div class="legend">
+    <b>📸 快拍存素材</b>＝手機拍照 30 秒入庫（超過 4MB 自動壓縮）　<b>🤖 AI 反思教練</b>＝引導提問、不代寫　<b>✍️ AI 百字簡述</b>＝三要素草稿（自己改）　<b>🧵 AI 三年統整</b>＝跨素材找主軸　<b>🔔 編輯中警報</b>＝LINE 自動提醒卡住的件　<b>📦 上傳包</b>＝合規檔案＋簡述一鍵複製
+  </div>
+
+  <!-- ============ 普通高中 ============ -->
+  <div class="track">
+    <div class="track-head">
+      <h2>🏫 普通高中（普高）</h2>
+      <span class="goal">目標：學測 → 個人申請</span>
+    </div>
+    <div class="persona">👧 <b>小婕</b>｜豐原高中普通科｜目標：中興大學企管系（ColleGo! 查到參採：課程成果重「探究與實作」、多元重「自主學習＋社團幹部」）</div>
+    <div class="quota-bar">每學年勾選中央額度：課程成果 <b>6</b> 件・多元表現 <b>10</b> 件｜個申二階：各系至多參採 <b>3＋10</b> 件</div>
+    <div class="timeline">
+
+      <div class="stage">
+        <div class="dot"><span class="yr">高一上</span></div>
+        <div class="stage-body">
+          <h3>養成隨手存的習慣</h3>
+          <ul>
+            <li>課堂報告、學習單——<b>當學期</b>上傳校內平台＋按送出認證（窗口約 9 月底～2 月初）</li>
+            <li class="warn">課程成果只能修課當學期認證，逾期永遠無法補件</li>
+          </ul>
+          <div class="sim">
+            <div class="sim-head">📁 小婕這學期存了什麼</div>
+            <div class="file"><span class="fico pdf">PDF</span><span class="fname">國文_家鄉街區踏查書面報告.pdf</span><span class="fmeta">2.4MB</span><span class="st ok">老師已認證 ✓</span></div>
+            <div class="file"><span class="fico jpg">JPG</span><span class="fname">生物_顯微鏡觀察學習單（📸 快拍）.jpg</span><span class="fmeta">4.8→2.1MB 自動壓縮</span><span class="st ok">老師已認證 ✓</span></div>
+            <div class="file"><span class="fico jpg">JPG</span><span class="fname">班際排球賽＋志工日照片 ×3.jpg</span><span class="fmeta">先入庫、之後再整理</span><span class="st multi">多元素材</span></div>
+          </div>
+          <div class="ai"><span class="feat">🤖 AI 反思教練</span>小婕上傳踏查報告後，AI 問：<span class="q">「訪談店家時，哪一段回答跟你原本的假設不一樣？」</span>——她把這段寫進報告結尾，從「交作業」變成「有觀點」。</div>
+        </div>
+      </div>
+
+      <div class="stage">
+        <div class="dot"><span class="yr">高一下</span></div>
+        <div class="stage-body">
+          <h3>啟動自主學習＋第一次勾選</h3>
+          <ul>
+            <li class="key">自主學習<span class="pct">87%</span>校系採計——主題不用大，「自己想學＋有紀錄＋有成果」就成立</li>
+            <li><span class="milestone">學年末</span>依學校公告勾選：課程成果 6 件、多元表現 10 件</li>
+          </ul>
+          <div class="sim">
+            <div class="sim-head">📁 小婕這學期存了什麼</div>
+            <div class="file"><span class="fico pdf">PDF</span><span class="fname">自主學習計畫_手搖飲糖分大調查（計畫書）.pdf</span><span class="fmeta">1.2MB</span><span class="st multi">多元表現</span></div>
+            <div class="file"><span class="fico pdf">PDF</span><span class="fname">英文_TED 演講分析心得.pdf</span><span class="fmeta">1.8MB</span><span class="st warn">卡在編輯中！</span></div>
+            <div class="file"><span class="fico jpg">JPG</span><span class="fname">吉他社成發＋幹部交接紀錄.jpg</span><span class="fmeta">📸 快拍</span><span class="st multi">多元素材</span></div>
+          </div>
+          <div class="ai"><span class="feat">🔔 編輯中警報</span>6/28 LINE 跳出：<span class="q">「你有 1 件素材停在『編輯中』，老師收不到——7/14 窗口關閉前快按送出認證！」</span>小婕當天補按，躲過一件作廢。<br><span class="feat">✍️ AI 百字簡述</span>勾選前，AI 幫每件產出「活動描述＋學到什麼＋連結校系」草稿，小婕改完存進 📦 上傳包。</div>
+        </div>
+      </div>
+
+      <div class="stage">
+        <div class="dot"><span class="yr">高二上</span></div>
+        <div class="stage-body">
+          <h3>拿下個申最愛的素材</h3>
+          <ul>
+            <li class="key">探究與實作——個申審查常客，<b>過程紀錄比完美結果加分</b>（卡關與修正最有價值）</li>
+          </ul>
+          <div class="sim">
+            <div class="sim-head">📁 小婕這學期存了什麼</div>
+            <div class="file"><span class="fico pdf">PDF</span><span class="fname">探究與實作_校園手搖飲消費行為期中紀錄.pdf</span><span class="fmeta">2.9MB・含問卷失敗重發過程</span><span class="st ok">老師已認證 ✓</span></div>
+            <div class="file"><span class="fico pdf">PDF</span><span class="fname">數學_段考成績自製統計圖表分析.pdf</span><span class="fmeta">0.9MB・仿學長姐把數據變作品</span><span class="st ok">老師已認證 ✓</span></div>
+          </div>
+          <div class="ai"><span class="feat">🤖 AI 反思教練</span>AI 問：<span class="q">「第一版問卷回收率只有三成，你們改了什麼？」</span>——這段修正過程後來成為二階面試被追問的亮點。</div>
+        </div>
+      </div>
+
+      <div class="stage">
+        <div class="dot"><span class="yr">高二下</span></div>
+        <div class="stage-body">
+          <h3>對準目標校系</h3>
+          <ul>
+            <li class="key">上 <b>ColleGo!</b> 查中興企管參採項目，回頭補強缺的類別</li>
+            <li><span class="milestone">學年末</span>第二次勾選 6＋10</li>
+          </ul>
+          <div class="sim">
+            <div class="sim-head">📁 小婕這學期存了什麼</div>
+            <div class="file"><span class="fico pdf">PDF</span><span class="fname">探究與實作_結案報告（含延伸討論）.pdf</span><span class="fmeta">5.6→3.4MB 自動壓縮</span><span class="st ok">老師已認證 ✓</span></div>
+            <div class="file"><span class="fico pdf">PDF</span><span class="fname">自主學習成果_Excel 數據分析 50 天實作.pdf</span><span class="fmeta">3.1MB・含每週進度＋筆記＋心得</span><span class="st multi">多元表現</span></div>
+          </div>
+          <div class="ai"><span class="feat">✍️ AI 百字簡述</span>AI 草稿：<span class="q">「以校園手搖飲為題完成問卷設計與 300 份數據分析（描述），學會把失敗的抽樣修正成有效樣本（學習），對應企管系的市場調查訓練（連結）。」</span>小婕改兩句後定稿。</div>
+        </div>
+      </div>
+
+      <div class="stage">
+        <div class="dot"><span class="yr">高三上</span></div>
+        <div class="stage-body">
+          <h3>最後的進貨機會</h3>
+          <ul>
+            <li class="warn">最後一個完整可認證學期，期末前全部送出認證</li>
+            <li>三年素材總盤點，每件補齊百字簡述</li>
+          </ul>
+          <div class="sim">
+            <div class="sim-head">📁 小婕這學期存了什麼</div>
+            <div class="file"><span class="fico pdf">PDF</span><span class="fname">公民_社會議題評論（含正反方資料）.pdf</span><span class="fmeta">2.2MB</span><span class="st ok">老師已認證 ✓</span></div>
+            <div class="file"><span class="fico jpg">JPG</span><span class="fname">多益 785 分成績單.jpg</span><span class="fmeta">📸 快拍</span><span class="st multi">檢定證照</span></div>
+            <div class="file"><span class="fico pdf">PDF</span><span class="fname">學藝股長_班刊企劃與執行紀錄.pdf</span><span class="fmeta">1.4MB</span><span class="st multi">幹部經歷</span></div>
+          </div>
+          <div class="ai"><span class="feat">🧵 AI 三年統整</span>AI 掃過 23 件素材後回：<span class="q">「你的主軸是『用數據看懂生活』——踏查、手搖飲問卷、段考圖表、Excel 自學都在同一條線上，建議勾選時圍繞它取捨。」</span></div>
+        </div>
+      </div>
+
+      <div class="stage exam">
+        <div class="dot"><span class="yr">高三下</span></div>
+        <div class="stage-body">
+          <h3>決戰個人申請（115 學年實際日程）</h3>
+          <ul>
+            <li><b>1 月</b>學測 → <b>2/25</b> 成績公布 → <b>3/23–3/25</b> 個申報名 → <b>3/31</b> 一階篩選公告</li>
+            <li class="key"><b>4/30–5/6</b> 二階審查資料上傳：從中央勾選至多 <b>3＋10</b> 件（或依簡章自行上傳 PDF）——三年存貨在這 7 天變現</li>
+            <li><b>5/14–5/31</b> 二階甄試 → <b>6/11</b> 統一分發放榜</li>
+          </ul>
+          <div class="sim">
+            <div class="sim-head">📦 小婕的上傳包（勾選日只花了一個下午）</div>
+            <div class="file"><span class="fico pdf">PDF</span><span class="fname">課程成果 ×3：探究結案／踏查報告／統計圖表分析</span><span class="st ok">百字簡述齊 ✓</span></div>
+            <div class="file"><span class="fico pdf">PDF</span><span class="fname">多元表現 ×10：自主學習×2、社團幹部、多益、志工…</span><span class="st ok">百字簡述齊 ✓</span></div>
+            <div class="file"><span class="fico pdf">PDF</span><span class="fname">多元表現綜整心得＋學習歷程自述.pdf</span><span class="fmeta">AI 引導提問、小婕自己寫、已附 AI 揭露聲明</span><span class="st ok">合規 ✓</span></div>
+          </div>
+          <div class="ai"><span class="feat">🤖 AI 反思教練</span>寫自述卡住時，AI 不給範文，只問：<span class="q">「如果企管系教授只記得你一件事，你希望是哪件？為什麼？」</span>——依教育部 113.12.13 函釋，AI 協助已在文末揭露。</div>
+        </div>
+      </div>
+    </div>
+    <div class="final">
+      <h3>高三下衝刺流程（115 學年）</h3>
+      <div class="flow">
+        <span class="f">學測<small>1 月</small></span><span class="arr">→</span>
+        <span class="f">成績公布<small>2/25</small></span><span class="arr">→</span>
+        <span class="f">個申報名・一階<small>3/23–3/31</small></span><span class="arr">→</span>
+        <span class="f hot">審查資料上傳 3＋10<small>4/30–5/6・變現週</small></span><span class="arr">→</span>
+        <span class="f">二階甄試<small>5/14–5/31</small></span><span class="arr">→</span>
+        <span class="f">放榜<small>6/11</small></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 技術型高中 ============ -->
+  <div class="track">
+    <div class="track-head">
+      <h2>🔧 技術型高中（技高／高職）</h2>
+      <span class="goal">目標：統測 → 四技甄選</span>
+    </div>
+    <div class="persona">👦 <b>阿凱</b>｜台中高工電機科｜目標：台科大電機系（四技甄選備審：<b>件數各系自訂</b>、B-1 專題／實習成果至少 1 件）</div>
+    <div class="quota-bar">每學年勾選中央額度：課程成果 <b>6</b> 件・多元表現 <b>10</b> 件｜甄選二階：<b>件數各系自訂</b>（自製 PDF 上限＝4MB × 件數）</div>
+    <div class="timeline">
+
+      <div class="stage">
+        <div class="dot"><span class="yr">高一上</span></div>
+        <div class="stage-body">
+          <h3>實習課就是素材庫</h3>
+          <ul>
+            <li class="key">實習科目成果（B-1）：實作照片＋操作步驟＋「你的判斷與調整」，<b>當學期</b>認證</li>
+            <li class="warn">課程成果只能修課當學期認證，逾期永遠無法補件</li>
+          </ul>
+          <div class="sim">
+            <div class="sim-head">📁 阿凱這學期存了什麼</div>
+            <div class="file"><span class="fico pdf">PDF</span><span class="fname">電工實習_三用電表量測實作紀錄.pdf</span><span class="fmeta">2.7MB・含接錯線的除錯照片</span><span class="st ok">老師已認證 ✓</span></div>
+            <div class="file"><span class="fico jpg">JPG</span><span class="fname">基本電學_歐姆定律實驗（📸 快拍）.jpg</span><span class="fmeta">5.2→2.4MB 自動壓縮</span><span class="st ok">老師已認證 ✓</span></div>
+          </div>
+          <div class="ai"><span class="feat">🤖 AI 反思教練</span>AI 問：<span class="q">「電表第一次量出負值，你當下怎麼判斷是接線還是檔位問題？」</span>——阿凱補上判斷過程，實作紀錄立刻有了「工程思維」。</div>
+        </div>
+      </div>
+
+      <div class="stage">
+        <div class="dot"><span class="yr">高一下</span></div>
+        <div class="stage-body">
+          <h3>檢定起步＋第一次勾選</h3>
+          <ul>
+            <li>丙級起步、目標乙級（甄選可直接加分）</li>
+            <li><span class="milestone">學年末</span>依學校公告勾選 6＋10</li>
+          </ul>
+          <div class="sim">
+            <div class="sim-head">📁 阿凱這學期存了什麼</div>
+            <div class="file"><span class="fico jpg">JPG</span><span class="fname">丙級室內配線術科練習＋合格證.jpg</span><span class="fmeta">📸 快拍</span><span class="st multi">檢定證照</span></div>
+            <div class="file"><span class="fico pdf">PDF</span><span class="fname">電子學實習_LED 閃爍電路製作.pdf</span><span class="fmeta">1.9MB</span><span class="st warn">卡在編輯中！</span></div>
+          </div>
+          <div class="ai"><span class="feat">🔔 編輯中警報</span>LINE 月報附警語：<span class="q">「LED 電路那件還在『編輯中』——現在按送出認證，兩分鐘；高三才發現，永遠來不及。」</span></div>
+        </div>
+      </div>
+
+      <div class="stage">
+        <div class="dot"><span class="yr">高二上</span></div>
+        <div class="stage-body">
+          <h3>專題啟動（B-1 多數系必採）</h3>
+          <ul>
+            <li class="key">每個階段都留紀錄：構想→製作→除錯→成品，失敗照最有價值</li>
+          </ul>
+          <div class="sim">
+            <div class="sim-head">📁 阿凱這學期存了什麼</div>
+            <div class="file"><span class="fico pdf">PDF</span><span class="fname">專題構想書_智慧澆花系統.pdf</span><span class="fmeta">1.1MB</span><span class="st ok">老師已認證 ✓</span></div>
+            <div class="file"><span class="fico jpg">JPG</span><span class="fname">麵包板電路除錯過程 ×5（📸 快拍＋一句話速記）.jpg</span><span class="fmeta">「電容極性接反燒了一顆」</span><span class="st wait">素材庫暫存</span></div>
+          </div>
+          <div class="ai"><span class="feat">🤖 AI 反思教練</span>AI 讀到速記後問：<span class="q">「燒掉那顆電容之後，你檢查流程改了什麼？」</span>——這句話後來寫進專題報告的「除錯方法」章節。</div>
+        </div>
+      </div>
+
+      <div class="stage">
+        <div class="dot"><span class="yr">高二下</span></div>
+        <div class="stage-body">
+          <h3>對準目標科系</h3>
+          <ul>
+            <li class="key">上「四技二專備審指引平台」查台科大電機：採計項目與<b>件數（各系自訂！）</b>提前抄下來</li>
+            <li><span class="milestone">學年末</span>第二次勾選；乙級學科開始準備</li>
+          </ul>
+          <div class="sim">
+            <div class="sim-head">📁 阿凱這學期存了什麼</div>
+            <div class="file"><span class="fico pdf">PDF</span><span class="fname">專題期中報告_智慧澆花系統（含濕度感測失準的修正）.pdf</span><span class="fmeta">6.8→3.7MB 自動壓縮</span><span class="st ok">老師已認證 ✓</span></div>
+            <div class="file"><span class="fico mp4">MP4</span><span class="fname">系統第一次自動澆水成功實測.mp4</span><span class="fmeta">8.4MB（影音上限 10MB）</span><span class="st multi">多元素材</span></div>
+          </div>
+          <div class="ai"><span class="feat">✍️ AI 百字簡述</span>AI 草稿：<span class="q">「設計 Arduino 智慧澆花系統並完成濕度校正（描述），學會用對照組排除感測誤差（學習），對應電機系的感測與控制課程（連結）。」</span></div>
+        </div>
+      </div>
+
+      <div class="stage">
+        <div class="dot"><span class="yr">高三上</span></div>
+        <div class="stage-body">
+          <h3>專題收尾＋最後認證</h3>
+          <ul>
+            <li class="key">專題成果報告完成＋送出認證——最後一個完整學期</li>
+            <li>三年素材總盤點，對照台科大電機的採計清單</li>
+          </ul>
+          <div class="sim">
+            <div class="sim-head">📁 阿凱這學期存了什麼</div>
+            <div class="file"><span class="fico pdf">PDF</span><span class="fname">專題成果報告書_智慧澆花系統（B-1 主打）.pdf</span><span class="fmeta">3.9MB・構想到成品全紀錄</span><span class="st ok">老師已認證 ✓</span></div>
+            <div class="file"><span class="fico jpg">JPG</span><span class="fname">乙級工業配線術科合格通知.jpg</span><span class="fmeta">📸 快拍</span><span class="st multi">檢定證照</span></div>
+          </div>
+          <div class="ai"><span class="feat">🧵 AI 三年統整</span>AI 掃過 19 件素材：<span class="q">「你的主軸是『從燒壞電容到穩定成品的除錯力』——備審每一件都往這條線靠，面試自我介紹也從這裡開場。」</span></div>
+        </div>
+      </div>
+
+      <div class="stage exam">
+        <div class="dot"><span class="yr">高三下</span></div>
+        <div class="stage-body">
+          <h3>決戰四技甄選（115 學年實際日程）</h3>
+          <ul>
+            <li><b>4/25–4/26</b> 統測 → <b>5/15–5/21</b> 一階報名 → <b>6/1</b> 一階篩選公告</li>
+            <li class="key"><b>6/5 起</b>二階備審網路上傳——<span class="hl">截止日各校系自訂</span>，有的系只給 5 天！B-1 至少 1 件、自製 PDF＝4MB × 件數</li>
+            <li><b>6/13–6/28</b> 指定項目甄試（面試＋實作）→ <b>7/1</b> 正備取 → <b>7/14</b> 統一分發</li>
+          </ul>
+          <div class="sim">
+            <div class="sim-head">📦 阿凱的上傳包（6/5 當天就傳完，不賭各系截止日）</div>
+            <div class="file"><span class="fico pdf">PDF</span><span class="fname">B-1：專題成果報告書＋電工實習紀錄</span><span class="st ok">百字簡述齊 ✓</span></div>
+            <div class="file"><span class="fico pdf">PDF</span><span class="fname">多元：乙級證照、澆水實測影片、競賽紀錄…</span><span class="st ok">百字簡述齊 ✓</span></div>
+            <div class="file"><span class="fico pdf">PDF</span><span class="fname">實作經驗自述（AI 引導、自己寫、含揭露聲明）.pdf</span><span class="st ok">合規 ✓</span></div>
+          </div>
+          <div class="ai"><span class="feat">📦 上傳包</span>平台早已備好每件的合規檔案＋可複製簡述，阿凱對照台科大電機簡章勾完就交——同班同學那週還在熬夜壓 PDF。</div>
+        </div>
+      </div>
+    </div>
+    <div class="final">
+      <h3>高三下衝刺流程（115 學年）</h3>
+      <div class="flow">
+        <span class="f">統測<small>4/25–4/26</small></span><span class="arr">→</span>
+        <span class="f">一階報名<small>5/15–5/21</small></span><span class="arr">→</span>
+        <span class="f">一階篩選<small>6/1</small></span><span class="arr">→</span>
+        <span class="f hot">備審上傳<small>6/5 起・各系截止不同</small></span><span class="arr">→</span>
+        <span class="f">甄試 面試＋實作<small>6/13–6/28</small></span><span class="arr">→</span>
+        <span class="f">放榜分發<small>7/1・7/14</small></span>
+      </div>
+    </div>
+  </div>
+
+  <p class="foot"><b>TIPS 英典教育・學習歷程陪伴平台</b>｜小婕與阿凱為情境模擬人物；日程依 115 學年個申委員會與四技甄選委員會公告，校內窗口以各校公告為準<br>AI 協助均依教育部 113.12.13 函釋於文末揭露；平台 AI 只引導反思、不代寫</p>
+</div>
+</body>
+</html>

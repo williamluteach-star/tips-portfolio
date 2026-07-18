@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>行銷素材 × 漏斗 × 檔期 總覽圖｜TIPS 學習歷程</title>
+<style>
+:root{--ink:#16233b;--paper:#f7f7f4;--mark:#ffde59;--graphite:#5b6472;--alert:#c93a2e;--ok:#1e7d4f;--rule:#e3e1da;--radius:12px;--font:'Noto Sans TC',system-ui,sans-serif;--mono:'IBM Plex Mono',ui-monospace,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--paper);color:var(--ink);line-height:1.6;padding:28px 16px 60px}
+.wrap{max-width:960px;margin:0 auto}
+h1{font-size:1.5rem;text-align:center;margin-bottom:4px}
+.sub{text-align:center;color:var(--graphite);font-size:.88rem;margin-bottom:26px}
+h2{font-size:1.1rem;margin:32px 0 12px;padding-bottom:6px;border-bottom:2px solid var(--ink)}
+h2 .no{display:inline-block;background:var(--ink);color:var(--mark);border-radius:8px;font-family:var(--mono);font-size:.85rem;padding:1px 9px;margin-right:8px;vertical-align:2px}
+.hl{background:linear-gradient(transparent 55%,var(--mark) 55%,var(--mark) 92%,transparent 92%);padding:0 3px;font-weight:700}
+.note{font-size:.82rem;color:var(--graphite)}
+
+/* 漏斗 */
+.funnel{display:flex;flex-direction:column;align-items:center;gap:0;margin-bottom:8px}
+.fstep{width:100%;max-width:760px;text-align:center;color:#fff;padding:14px 18px;font-weight:700;position:relative;font-size:.98rem}
+.fstep small{display:block;font-weight:400;font-size:.8rem;opacity:.9;margin-top:2px}
+.f1{background:var(--ink);clip-path:polygon(0 0,100% 0,94% 100%,6% 100%)}
+.f2{background:#2c3e5c;clip-path:polygon(6% 0,94% 0,88% 100%,12% 100%);width:88%}
+.f3{background:#3f5578;clip-path:polygon(12% 0,88% 0,82% 100%,18% 100%);width:76%}
+.f4{background:var(--ok);clip-path:polygon(18% 0,82% 0,76% 100%,24% 100%);width:64%}
+.farrow{color:var(--graphite);font-size:1.2rem;margin:-2px 0}
+
+/* 三條腿 */
+.legs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.leg{background:#fff;border:2px solid var(--ink);border-radius:var(--radius);overflow:hidden;box-shadow:3px 3px 0 var(--rule)}
+.leg-h{padding:10px 14px;color:#fff;font-weight:900;font-size:.95rem}
+.leg-h small{display:block;font-weight:400;font-size:.74rem;opacity:.9}
+.leg.social .leg-h{background:#c0392b}
+.leg.line .leg-h{background:#1e7d4f}
+.leg.blog .leg-h{background:#2c3e5c}
+.leg-b{padding:12px 14px}
+.mat{border-top:1px dashed var(--rule);padding:8px 0;font-size:.82rem}
+.mat:first-child{border-top:none}
+.mat b{display:block;font-size:.86rem}
+.mat .m-role{color:var(--graphite);font-size:.75rem}
+.tagp{display:inline-block;font-size:.68rem;font-weight:900;border-radius:5px;padding:1px 6px;margin-top:3px}
+.tagp.done{background:#e3f2e9;color:var(--ok);border:1px solid var(--ok)}
+.job{text-align:center;font-size:.8rem;color:var(--graphite);margin-top:4px}
+
+/* 檔期時間軸 */
+.tl{background:#fff;border:2px solid var(--ink);border-radius:var(--radius);overflow:hidden;box-shadow:3px 3px 0 var(--mark)}
+.phase{display:flex;gap:0;border-top:2px solid var(--rule)}
+.phase:first-child{border-top:none}
+.ph-date{flex:0 0 130px;background:var(--paper);padding:12px 14px;font-family:var(--mono);font-weight:700;font-size:.82rem;border-right:2px solid var(--rule);display:flex;flex-direction:column;justify-content:center}
+.ph-date small{font-weight:400;color:var(--graphite);font-size:.72rem;margin-top:2px}
+.ph-body{flex:1;padding:12px 16px}
+.ph-body h3{font-size:.95rem;margin-bottom:4px}
+.ph-body h3 .pill{font-size:.68rem;font-weight:900;border-radius:999px;padding:1px 9px;margin-left:6px;vertical-align:1px}
+.pill.peak{background:var(--alert);color:#fff}
+.pill.now{background:var(--mark);color:var(--ink)}
+.ph-body ul{list-style:none;font-size:.83rem;margin-top:3px}
+.ph-body li{padding:2px 0 2px 16px;position:relative}
+.ph-body li::before{content:'▸';position:absolute;left:0;color:#b8860b;font-weight:900}
+.ph-body .bot{font-size:.75rem;color:var(--graphite);margin-top:4px}
+.ph-body .bot b{color:var(--ink)}
+
+.sched{background:#eef3fb;border:1.5px dashed var(--ink);border-radius:var(--radius);padding:14px 18px;margin-top:14px;font-size:.85rem}
+.sched b.k{font-family:var(--mono)}
+.foot{text-align:center;color:var(--graphite);font-size:.78rem;margin-top:28px}
+.foot b{color:var(--ink)}
+@media(max-width:640px){.legs{grid-template-columns:1fr}.ph-date{flex-basis:100px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>行銷素材 × 漏斗 × 檔期 總覽圖</h1>
+<p class="sub">一張圖看懂：15 件素材各屬哪條腿、在漏斗哪一層、什麼時間點發｜TIPS 學習歷程零廣告費行銷</p>
+
+<h2><span class="no">1</span>轉換漏斗：所有素材最終都在推這條路</h2>
+<div class="funnel">
+  <div class="fstep f1">① 看到內容<small>FB / IG 貼文・部落格被搜到</small></div>
+  <div class="farrow">▼</div>
+  <div class="fstep f2">② 加 LINE 領資料<small>用「三年流程圖」當鉤子換好友＝你的核心資產</small></div>
+  <div class="farrow">▼</div>
+  <div class="fstep f3">③ 出席說明會 / 免費健檢<small>LINE 自動旅程 7 天養到這一步</small></div>
+  <div class="farrow">▼</div>
+  <div class="fstep f4">④ 付費（外部生）/ 續班（內部生）<small>北極星：外部生 15 人損益兩平</small></div>
+</div>
+<p class="note" style="text-align:center">關鍵認知：這不是「從部落格開始」——是三條腿<b>同時餵三個入口</b>，把陌生家長一路推到 LINE、再到付費。</p>
+
+<h2><span class="no">2</span>三條腿：15 件素材各司其職</h2>
+<div class="legs">
+  <div class="leg social">
+    <div class="leg-h">🔥 社群貼文<small>任務：製造觸及與分享 → 導去加 LINE</small></div>
+    <div class="leg-b">
+      <div class="mat"><b>FB×4（家長端）</b><span class="m-role">七成交白卷／手搖飲故事／高一死線／時程懶人包</span><span class="tagp done">✓ 已完成</span></div>
+      <div class="mat"><b>IG×4（學生端）</b><span class="m-role">編輯中 Reels／採計率輪播／30秒挑戰／對比梗圖</span><span class="tagp done">✓ 已完成</span></div>
+      <div class="mat"><b>FB 圖卡×4</b><span class="m-role">1080×1350 PNG</span><span class="tagp done">✓ 已完成</span></div>
+    </div>
+    <p class="job">最前端的「吸」<br>幾天後就沉，靠爆發力</p>
+  </div>
+  <div class="leg line">
+    <div class="leg-h">💬 LINE 官方帳號<small>任務：接住好友 → 7 天養到說明會</small></div>
+    <div class="leg-b">
+      <div class="mat"><b>自動旅程×3</b><span class="m-role">加入即送流程圖／第3天編輯中警報／第7天邀說明會</span><span class="tagp done">✓ 已完成</span></div>
+      <div class="mat"><b>三年流程圖領取頁</b><span class="m-role">portfolio.tips-edu.com/roadmap/</span><span class="tagp done">✓ 已完成</span></div>
+      <div class="mat"><b>標籤分眾</b><span class="m-role">年級×身分自動貼標，分眾推播不洗版</span></div>
+    </div>
+    <p class="job">中段的「養」<br>你的核心資產＝好友數</p>
+  </div>
+  <div class="leg blog">
+    <div class="leg-h">📈 部落格 SEO/GEO<small>任務：長期被 Google／AI 搜到</small></div>
+    <div class="leg-b">
+      <div class="mat"><b>文章×3</b><span class="m-role">編輯中陷阱／高一三年布局／自主學習入門</span><span class="tagp done">✓ 已完成（待審）</span></div>
+      <div class="mat"><b>封面×3＋首頁卡片＋feed＋sitemap</b><span class="m-role">已進站點地圖，Google 找得到</span><span class="tagp done">✓ 已完成</span></div>
+      <div class="mat"><b>內容母體</b><span class="m-role">一篇長文＝3 張 FB 圖卡＋1 支 Reels 的來源</span></div>
+    </div>
+    <p class="job">長期複利<br>不靠爆紅，靠長尾</p>
+  </div>
+</div>
+
+<h2><span class="no">3</span>檔期時間軸：什麼素材在什麼時間點發</h2>
+<div class="tl">
+  <div class="phase">
+    <div class="ph-date">7/18–7/31<small>現在</small></div>
+    <div class="ph-body">
+      <h3>彈藥準備週<span class="pill now">進行中</span></h3>
+      <ul>
+        <li>三篇部落格上線（你審稿後）＋sitemap 送 Google</li>
+        <li>LINE 新好友自動旅程設定好、流程圖領取頁上線</li>
+        <li>官網導覽列補「學習歷程」連結（你本地 push）</li>
+        <li>說明會日期定案、開放報名</li>
+      </ul>
+      <p class="bot">產出：<b>全部素材就位</b>，開打前不再臨時趕工</p>
+    </div>
+  </div>
+  <div class="phase">
+    <div class="ph-date">8/18–8/23<small>第一週</small></div>
+    <div class="ph-body">
+      <h3>社群暖身・第一週</h3>
+      <ul>
+        <li>週二 FB-1 七成交白卷（數據 hook）　週三 IG-1 編輯中 Reels（衝突）</li>
+        <li>週五 FB-2 手搖飲故事（故事）　週日 IG-2 採計率輪播（排行榜）</li>
+      </ul>
+      <p class="bot">同步：FB 在地家長社團開始用「熱心家長」身分回答問題</p>
+    </div>
+  </div>
+  <div class="phase">
+    <div class="ph-date">8/25–8/30<small>第二週</small></div>
+    <div class="ph-body">
+      <h3>社群加溫・第二週</h3>
+      <ul>
+        <li>週二 FB-3 高一死線（資訊落差）　週三 IG-3 30秒挑戰（成果展示）</li>
+        <li>週五 FB-4 時程懶人包（純實用）　週日 IG-4 對比梗圖（幽默）</li>
+      </ul>
+      <p class="bot">開學前兩週＝家長焦慮升溫，貼文導 LINE 效率最高</p>
+    </div>
+  </div>
+  <div class="phase">
+    <div class="ph-date">8/31 起<small>開學週</small></div>
+    <div class="ph-body">
+      <h3>三客群齊發<span class="pill peak">最大檔期</span></h3>
+      <ul>
+        <li>LINE 分眾推播：高一家長「第一個死線」／高三家長「距 4 月勾選剩 7 個月」／內部生家長開學特刊</li>
+        <li>說明會第一場（8 月上旬新訓期已辦一場、開學再一場）</li>
+      </ul>
+      <p class="bot">兩週社群累積的 LINE 好友，在此轉成說明會報名</p>
+    </div>
+  </div>
+  <div class="phase">
+    <div class="ph-date">9 月<small>開學後</small></div>
+    <div class="ph-body">
+      <h3>高三素材健檢</h3>
+      <ul>
+        <li>推「免費三年素材盤點」（總整理包的銷售前奏）</li>
+        <li>學校陸續公告勾選期程，跟著發提醒文</li>
+      </ul>
+    </div>
+  </div>
+  <div class="phase">
+    <div class="ph-date">10 月中<small>段考後</small></div>
+    <div class="ph-body">
+      <h3>期中檢查點＋數據復盤</h3>
+      <ul>
+        <li>「段考完，順手存這學期素材」campaign</li>
+        <li>回收兩週 A/B 數據，決定第二批素材 hook 配比、是否加碼廣告</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="sched">
+  <b>🔔 已排入你的排程（雲端自動執行，會推播通知你）</b><br>
+  這些排程任務會在時間到時，自動把「那一批的完稿貼文＋要配哪張圖卡＋發文時間」整理成一份可直接貼上的清單，推播到你手機，<b>由你做最後確認再發</b>（發文與貼文一律你親手，符合資安與平台規範）：
+  <ul style="list-style:none;margin-top:8px;font-size:.83rem">
+    <li>・<b class="k">8/15（六）09:00</b>　第一週 4 則完稿包</li>
+    <li>・<b class="k">8/22（六）09:00</b>　第二週 4 則完稿包</li>
+    <li>・<b class="k">8/28（五）09:00</b>　開學週三客群 LINE 訊息＋說明會推廣包</li>
+    <li>・<b class="k">9/2（三）09:00</b>　高三素材健檢 campaign 提案</li>
+    <li>・<b class="k">10/14（三）09:00</b>　期中檢查點＋兩週數據復盤提醒</li>
+  </ul>
+</div>
+
+<p class="foot"><b>TIPS 英典教育・學習歷程陪伴平台</b>｜素材皆已通過三查（焦慮附解方／無保證代寫／見證揭露）<br>排程時間為建議節奏，可隨時調整；發文平台無法代操作，排程只負責備稿＋提醒＋通知</p>
+</div>
+</body>
+</html>
