@@ -77,6 +77,7 @@
   .hero .note { margin-top: 14px; font-size: .85rem; color: var(--ink-gray); }
 
   section { padding: 58px 0; }
+  section.wrap:not(.hero) { padding-top: 54px; padding-bottom: 54px; }
   .section-title { font-size: 1.6rem; font-weight: 800; margin-bottom: 8px; }
   .section-sub { color: var(--ink-gray); margin-bottom: 34px; max-width: 44em; }
 
@@ -262,14 +263,24 @@
       </div>
       <div class="grid2">
         <div>
-          <label data-i18n="l_app">WeChat / LINE (optional)</label>
+          <label data-i18n="l_app">WeChat / WhatsApp (optional)</label>
           <select name="contactApp">
-            <option value="">—</option><option value="wechat">WeChat</option><option value="line">LINE</option>
+            <option value="">—</option><option value="wechat">WeChat</option><option value="whatsapp">WhatsApp</option>
           </select>
         </div>
         <div>
-          <label data-i18n="l_appid">ID (optional)</label>
+          <label data-i18n="l_appid">ID / handle (optional)</label>
           <input name="contactId" maxlength="80" />
+        </div>
+      </div>
+      <div class="grid2">
+        <div>
+          <label data-i18n="l_phone">Phone number (optional)</label>
+          <input name="phone" type="tel" maxlength="40" autocomplete="tel" />
+        </div>
+        <div>
+          <label data-i18n="l_wa">WhatsApp number (optional)</label>
+          <input name="whatsapp" type="tel" maxlength="40" />
         </div>
       </div>
       <label data-i18n="l_notes">Anything you want us to know? (optional)</label>
@@ -329,8 +340,10 @@ const ZH_TW = {
   l_grad: '孩子預計高中畢業年',
   l_grad_other: '還不確定',
   l_lang: '偏好語言',
-  l_app: 'WeChat / LINE（選填）',
-  l_appid: 'ID（選填）',
+  l_app: 'WeChat / WhatsApp（選填）',
+  l_appid: 'ID / 帳號（選填）',
+  l_phone: '電話號碼（選填）',
+  l_wa: 'WhatsApp 號碼（選填）',
   l_notes: '想讓我們知道的事（選填）',
   form_btn: '加入候補名單',
   msg_ok: '收到！我們會在開放早期名額時通知你 🎉',
@@ -375,8 +388,10 @@ const ZH_CN = {
   l_grad: '孩子预计高中毕业年',
   l_grad_other: '还不确定',
   l_lang: '偏好语言',
-  l_app: 'WeChat / LINE（选填）',
-  l_appid: 'ID（选填）',
+  l_app: 'WeChat / WhatsApp（选填）',
+  l_appid: 'ID / 账号（选填）',
+  l_phone: '电话号码（选填）',
+  l_wa: 'WhatsApp 号码（选填）',
   l_notes: '想让我们知道的事（选填）',
   form_btn: '加入候补名单',
   msg_ok: '收到！我们会在开放早期名额时通知你 🎉',
