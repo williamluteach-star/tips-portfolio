@@ -430,6 +430,11 @@ async function submitWL(ev) {
   btn.disabled = true; btn.style.opacity = .6; msg.className = 'form-msg';
   const payload = {};
   new FormData(f).forEach((v, k) => { payload[k] = v; });
+  // 電話 / WhatsApp 併入 notes，確保現有後端就能收到（無需改後端）；日後若後端加欄位也相容
+  const _c = [];
+  if (payload.phone) _c.push('電話 ' + payload.phone);
+  if (payload.whatsapp) _c.push('WhatsApp ' + payload.whatsapp);
+  if (_c.length) payload.notes = '［聯絡］' + _c.join('　') + (payload.notes ? '\n' + payload.notes : '');
   try {
     const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'waitlist', payload }) });
     const j = await r.json();
