@@ -589,9 +589,29 @@ function ArtifactForm({ student, onSaved, initialSemester }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
+  const [sugg, setSugg] = useState(null);
+  const [sBusy, setSBusy] = useState(false);
 
   function set(k, v) {
     setForm((f) => ({ ...f, [k]: v, ...(k === 'category' ? { subcategory: SUBCATS[v][0] } : {}) }));
+  }
+
+  async function askCoach() {
+    setSBusy(true); setErr('');
+    try {
+      const d = await api('aiSuggest', { semester: form.semester });
+      setSugg(d.suggestions || []);
+    } catch (e) { setErr(e.message); }
+    finally { setSBusy(false); }
+  }
+  function applySugg(s) {
+    setForm((f) => {
+      const category = (s.category === 'diverse' || s.category === 'course_result') ? s.category : f.category;
+      const subs = SUBCATS[category] || [];
+      const subcategory = subs.includes(s.subcategory) ? s.subcategory : subs[0];
+      return { ...f, title: s.title || f.title, category, subcategory };
+    });
+    setSugg(null);
   }
 
   async function submit() {
@@ -636,6 +656,29 @@ function ArtifactForm({ student, onSaved, initialSemester }) {
   return (
     <div style={{ marginTop: 16 }}>
       <p className="hint" style={{ marginTop: 0 }}>只要<b>名稱＋照片</b>就能存，30 秒搞定。分類先用預設值，之後隨時可改。</p>
+
+      <div style={{ margin: '4px 0 2px' }}>
+        {!sugg && (
+          <button className="btn-sm" disabled={sBusy} onClick={askCoach}>
+            {sBusy ? '教練思考中…（約 10 秒）' : '✦ 不知道存什麼？問教練該存什麼'}
+          </button>
+        )}
+        {sugg && (
+          <div>
+            <p className="hint" style={{ marginTop: 6 }}>教練建議這學期可以存這些（點一下帶入名稱）：</p>
+            {sugg.length === 0 && <p className="empty-hint">教練暫時沒有建議，先自己存一件吧。</p>}
+            {sugg.map((s, i) => (
+              <button key={i} type="button" onClick={() => applySugg(s)} style={{ display: 'block', width: '100%', textAlign: 'left', border: '1.5px solid var(--rule)', borderRadius: 10, background: '#fff', padding: '9px 11px', marginBottom: 8, cursor: 'pointer' }}>
+                <b style={{ display: 'block', fontSize: '0.9rem', color: 'var(--ink)' }}>{s.title}</b>
+                <span style={{ display: 'block', fontSize: '0.78rem', color: 'var(--graphite)', marginTop: 2, lineHeight: 1.45 }}>{s.hint}</span>
+                <span style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--ink)', marginTop: 5 }}>＋ 點我帶入名稱</span>
+              </button>
+            ))}
+            <p className="hint" style={{ fontSize: '0.72rem' }}>教練只給方向與拍攝提示，內容與反思由你自己寫；作品會標記「曾用 AI 引導」。</p>
+            <button className="btn-sm" type="button" onClick={() => setSugg(null)}>↺ 收起／重新問</button>
+          </div>
+        )}
+      </div>
 
       <label htmlFor="f-title">這是什麼？</label>
       <input id="f-title" value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="例：專題期中成果、英文小論文、園遊會擺攤" />
