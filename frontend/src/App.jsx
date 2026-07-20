@@ -1,6 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api, setToken, fileToBase64 } from './api.js';
 
+/* 介紹頁帶來的語言（?lang 或 localStorage）；台灣帳號預設繁中、美國預設英文 */
+function resolveAppLang() {
+  try {
+    var u = new URLSearchParams(window.location.search).get('lang');
+    if (u === 'en' || u === 'zh-TW' || u === 'zh-CN') { try { localStorage.setItem('tips_lang', u); } catch (e) {} return u; }
+    var s = localStorage.getItem('tips_lang');
+    if (s === 'en' || s === 'zh-TW' || s === 'zh-CN') return s;
+  } catch (e) {}
+  return null;
+}
+const APP_LANG0 = resolveAppLang();
+
 /* ============ 常數 ============ */
 
 const SUBCATS = {
@@ -122,7 +134,7 @@ function cmPct(x) { return x == null ? '—' : Math.round(x * 100) + '%'; }
 function cmNum(x) { return x == null ? '—' : Number(x).toLocaleString(); }
 function cmMoney(x) { return x == null ? '—' : '$' + Number(x).toLocaleString(); }
 
-function CollegeMatch({ student }) {
+function CollegeMatch({ student, lang }) {
   const initFocus = CM_FOCUS_FIELD[student.focus_anchor] ? student.focus_anchor : 'explore';
   const [q, setQ] = useState('');
   const [stt, setStt] = useState('');
@@ -138,7 +150,7 @@ function CollegeMatch({ student }) {
   useEffect(() => { api('listColleges').then(setSaved).catch(() => {}); }, []);
   const savedIds = new Set(saved.map((s) => String(s.college_id)));
   const ff = CM_FOCUS_FIELD[focus];
-  const EN = student.school_type === 'us';
+  const EN = lang === 'en';
   const L = (zh, en) => (EN ? en : zh);
   const FOCI_L = [
     ['explore', L('還在探索', 'Still exploring')], ['cs', L('資訊 / 電腦科學', 'CS / Computer Science')],
@@ -266,6 +278,184 @@ function CollegeMatch({ student }) {
   );
 }
 
+/* ============ 美國 Overview（Common App 導向：活動 / 榮譽 / Essay） ============ */
+const US_CATS = ['Academic', 'Art', 'Athletics: Club', 'Athletics: JV/Varsity', 'Career Oriented', 'Community Service (Volunteer)', 'Computer/Technology', 'Cultural', 'Dance', 'Debate/Speech', 'Environmental', 'Family Responsibilities', 'Foreign Exchange', 'Foreign Language', 'Internship', 'Journalism/Publication', 'Junior R.O.T.C.', 'LGBT', 'Music: Instrumental', 'Music: Vocal', 'Religious', 'Research', 'Robotics', 'School Spirit', 'Science/Math', 'Social Justice', 'Student Govt./Politics', 'Theater/Drama', 'Work (Paid)', 'Other Club/Activity'];
+const US_LEVELS = ['School', 'State/Regional', 'National', 'International'];
+const US_CARD = { background: '#fff', border: '1.5px solid #d9d9d2', borderRadius: 12, padding: '12px 14px', margin: '8px 0' };
+const US_MUTED = { color: '#5a6378', fontSize: '.82rem' };
+const US_BTN = { background: '#16233b', color: '#f7f7f4', border: 'none', borderRadius: 9, padding: '9px 16px', fontWeight: 800, cursor: 'pointer' };
+const US_ADD = { background: '#ffde59', color: '#16233b', border: 'none', borderRadius: 9, padding: '8px 14px', fontWeight: 800, cursor: 'pointer' };
+const US_FLD = { width: '100%', padding: '9px 11px', border: '1.5px solid #d9d9d2', borderRadius: 8, fontSize: '.92rem', fontFamily: 'inherit', background: '#f7f7f4', color: '#16233b', margin: '4px 0' };
+function usWordCount(s) { return String(s || '').trim() ? String(s).trim().split(/\s+/).length : 0; }
+
+function USOverview({ student, lang }) {
+  const t = (zh, en, cn) => (lang === 'en' ? en : lang === 'zh-CN' ? cn : zh);
+  const [recs, setRecs] = useState(null);
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState('');   // '' | 'activity' | 'honor' | 'essay'
+  const [f, setF] = useState({});
+  const [editId, setEditId] = useState('');
+
+  useEffect(() => { reload(); }, []);
+  function reload() { return api('usList', {}).then(setRecs).catch((e) => setErr(e.message)); }
+  const byKind = (k) => (recs || []).filter((r) => r.kind === k);
+  const set = (k, v) => setF(Object.assign({}, f, { [k]: v }));
+  function startAdd(kind, defaults) { setOpen(kind); setF(defaults || {}); setEditId(''); setErr(''); }
+  function startEdit(rec) { setOpen(rec.kind); setF(Object.assign({}, rec.data)); setEditId(rec.id); setErr(''); }
+  function cancel() { setOpen(''); setF({}); setEditId(''); }
+  async function save() {
+    setBusy(true); setErr('');
+    try { await api('usSave', { kind: open, data: f, id: editId || undefined }); await reload(); cancel(); }
+    catch (e) { setErr(e.message); }
+    setBusy(false);
+  }
+  async function remove(id) { setErr(''); try { await api('usRemove', { id }); await reload(); } catch (e) { setErr(e.message); } }
+
+  if (err && !recs) return <p style={{ color: '#b3261e' }}>{err}</p>;
+  if (!recs) return <p style={{ color: '#5a6378' }}>{t('載入中…', 'Loading…', '载入中…')}</p>;
+  const acts = byKind('activity'), hons = byKind('honor'), esss = byKind('essay');
+
+  const grades = ['9', '10', '11', '12'];
+  function toggleGrade(g) {
+    const cur = (f.grades || []).slice();
+    const i = cur.indexOf(g);
+    if (i >= 0) cur.splice(i, 1); else cur.push(g);
+    set('grades', cur);
+  }
+
+  return (
+    <div style={{ padding: '10px 4px 90px' }}>
+      <h2 style={{ margin: '4px 0' }}>{t('美國升學總覽', 'Application Overview', '美国升学总览')}</h2>
+      <p style={US_MUTED}>{t('四年一點一滴累積：活動、榮譽、Essay。這就是申請時要說的故事。', 'Build it across four years — activities, honors, essays. This is the story your application tells.', '四年一点一滴积累：活动、荣誉、Essay。这就是申请时要说的故事。')}</p>
+      {err && <p style={{ color: '#b3261e', fontSize: '.9rem' }}>{err}</p>}
+
+      {/* ===== Activities ===== */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 18 }}>
+        <h3 style={{ margin: 0 }}>{t('活動', 'Activities', '活动')} <span style={US_MUTED}>{acts.length}/10</span></h3>
+        {open !== 'activity' && acts.length < 10 && <button style={US_ADD} onClick={() => startAdd('activity', { grades: [], timing: 'During school year' })}>＋ {t('新增活動', 'Add activity', '新增活动')}</button>}
+      </div>
+      {acts.map((a) => (
+        <div key={a.id} style={US_CARD}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+            <b>{a.data.position || t('(未填職位)', '(no role)', '(未填职位)')}</b>
+            <span style={{ whiteSpace: 'nowrap' }}>
+              <button style={{ border: 'none', background: 'none', cursor: 'pointer', fontWeight: 700 }} onClick={() => startEdit(a)}>{t('編輯', 'Edit', '编辑')}</button>
+              <button style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#b3261e', fontWeight: 700 }} onClick={() => remove(a.id)}>✕</button>
+            </span>
+          </div>
+          <div style={US_MUTED}>{a.data.org}{a.data.type ? ' · ' + a.data.type : ''}</div>
+          {a.data.description && <div style={{ fontSize: '.9rem', margin: '4px 0' }}>{a.data.description}</div>}
+          <div style={US_MUTED}>{(a.data.hours ? a.data.hours + ' hrs/wk · ' : '') + (a.data.weeks ? a.data.weeks + ' wks/yr · ' : '') + ((a.data.grades || []).length ? 'Gr ' + (a.data.grades || []).join(',') : '')}</div>
+        </div>
+      ))}
+      {open === 'activity' && (
+        <div style={Object.assign({}, US_CARD, { border: '2px solid #16233b' })}>
+          <select style={US_FLD} value={f.type || ''} onChange={(e) => set('type', e.target.value)}>
+            <option value="">{t('活動類別', 'Activity type', '活动类别')}</option>
+            {US_CATS.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <input style={US_FLD} maxLength={50} placeholder={t('職位／角色（≤50 字）', 'Position/role (≤50 chars)', '职位／角色（≤50 字）')} value={f.position || ''} onChange={(e) => set('position', e.target.value)} />
+          <input style={US_FLD} maxLength={100} placeholder={t('組織名稱（≤100 字）', 'Organization (≤100 chars)', '组织名称（≤100 字）')} value={f.org || ''} onChange={(e) => set('org', e.target.value)} />
+          <textarea style={Object.assign({}, US_FLD, { minHeight: 60 })} maxLength={150} placeholder={t('描述你的貢獻與影響（≤150 字，Common App 上限）', 'Describe your impact (≤150 chars, Common App limit)', '描述你的贡献与影响（≤150 字，Common App 上限）')} value={f.description || ''} onChange={(e) => set('description', e.target.value)} />
+          <div style={US_MUTED}>{(f.description || '').length}/150</div>
+          <div style={{ margin: '8px 0' }}>
+            <span style={US_MUTED}>{t('年級：', 'Grades: ', '年级：')}</span>
+            {grades.map((g) => (
+              <label key={g} style={{ marginRight: 10, fontSize: '.9rem' }}>
+                <input type="checkbox" checked={(f.grades || []).indexOf(g) >= 0} onChange={() => toggleGrade(g)} /> {g}
+              </label>
+            ))}
+          </div>
+          <select style={US_FLD} value={f.timing || 'During school year'} onChange={(e) => set('timing', e.target.value)}>
+            <option value="During school year">{t('學年期間', 'During school year', '学年期间')}</option>
+            <option value="During school break">{t('假期期間', 'During school break', '假期期间')}</option>
+            <option value="All year">{t('全年', 'All year', '全年')}</option>
+          </select>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <input style={US_FLD} type="number" min="0" placeholder={t('每週時數', 'Hours/week', '每周时数')} value={f.hours || ''} onChange={(e) => set('hours', e.target.value)} />
+            <input style={US_FLD} type="number" min="0" placeholder={t('每年週數', 'Weeks/year', '每年周数')} value={f.weeks || ''} onChange={(e) => set('weeks', e.target.value)} />
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <button style={US_BTN} disabled={busy} onClick={save}>{busy ? t('儲存中…', 'Saving…', '保存中…') : t('儲存', 'Save', '保存')}</button>
+            <button style={{ marginLeft: 8, border: 'none', background: 'none', cursor: 'pointer' }} onClick={cancel}>{t('取消', 'Cancel', '取消')}</button>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Honors ===== */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 22 }}>
+        <h3 style={{ margin: 0 }}>{t('榮譽 / 獎項', 'Honors & Awards', '荣誉 / 奖项')} <span style={US_MUTED}>{hons.length}/5</span></h3>
+        {open !== 'honor' && hons.length < 5 && <button style={US_ADD} onClick={() => startAdd('honor', { level: 'School' })}>＋ {t('新增榮譽', 'Add honor', '新增荣誉')}</button>}
+      </div>
+      {hons.map((h) => (
+        <div key={h.id} style={US_CARD}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+            <span><b>{h.data.title}</b> <span style={US_MUTED}>· {h.data.level}{h.data.grade ? ' · Gr ' + h.data.grade : ''}</span></span>
+            <span style={{ whiteSpace: 'nowrap' }}>
+              <button style={{ border: 'none', background: 'none', cursor: 'pointer', fontWeight: 700 }} onClick={() => startEdit(h)}>{t('編輯', 'Edit', '编辑')}</button>
+              <button style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#b3261e', fontWeight: 700 }} onClick={() => remove(h.id)}>✕</button>
+            </span>
+          </div>
+        </div>
+      ))}
+      {open === 'honor' && (
+        <div style={Object.assign({}, US_CARD, { border: '2px solid #16233b' })}>
+          <input style={US_FLD} maxLength={100} placeholder={t('獎項名稱', 'Honor / award title', '奖项名称')} value={f.title || ''} onChange={(e) => set('title', e.target.value)} />
+          <select style={US_FLD} value={f.level || 'School'} onChange={(e) => set('level', e.target.value)}>
+            {US_LEVELS.map((lv) => <option key={lv} value={lv}>{lv}</option>)}
+          </select>
+          <select style={US_FLD} value={f.grade || ''} onChange={(e) => set('grade', e.target.value)}>
+            <option value="">{t('年級（選填）', 'Grade (optional)', '年级（选填）')}</option>
+            {grades.map((g) => <option key={g} value={g}>{g}</option>)}
+          </select>
+          <div style={{ marginTop: 8 }}>
+            <button style={US_BTN} disabled={busy} onClick={save}>{busy ? t('儲存中…', 'Saving…', '保存中…') : t('儲存', 'Save', '保存')}</button>
+            <button style={{ marginLeft: 8, border: 'none', background: 'none', cursor: 'pointer' }} onClick={cancel}>{t('取消', 'Cancel', '取消')}</button>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Essays ===== */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 22 }}>
+        <h3 style={{ margin: 0 }}>{t('Essay 文書', 'Essays', 'Essay 文书')} <span style={US_MUTED}>{esss.length}</span></h3>
+        {open !== 'essay' && <button style={US_ADD} onClick={() => startAdd('essay', { kind: 'personal' })}>＋ {t('新增 Essay', 'Add essay', '新增 Essay')}</button>}
+      </div>
+      {esss.map((es) => (
+        <div key={es.id} style={US_CARD}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+            <b>{es.data.title || (es.data.kind === 'personal' ? t('主文書', 'Personal statement', '主文书') : t('補充 Essay', 'Supplemental', '补充 Essay'))}</b>
+            <span style={{ whiteSpace: 'nowrap' }}>
+              <button style={{ border: 'none', background: 'none', cursor: 'pointer', fontWeight: 700 }} onClick={() => startEdit(es)}>{t('編輯', 'Edit', '编辑')}</button>
+              <button style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#b3261e', fontWeight: 700 }} onClick={() => remove(es.id)}>✕</button>
+            </span>
+          </div>
+          <div style={US_MUTED}>{usWordCount(es.data.text)} {t('字', 'words', '词')}{es.data.kind === 'personal' ? ' / 650' : ''}</div>
+        </div>
+      ))}
+      {open === 'essay' && (
+        <div style={Object.assign({}, US_CARD, { border: '2px solid #16233b' })}>
+          <select style={US_FLD} value={f.kind || 'personal'} onChange={(e) => set('kind', e.target.value)}>
+            <option value="personal">{t('主文書（Personal Statement，650 字）', 'Personal statement (650 words)', '主文书（Personal Statement，650 词）')}</option>
+            <option value="supplemental">{t('補充 Essay（各校）', 'Supplemental (per school)', '补充 Essay（各校）')}</option>
+          </select>
+          <input style={US_FLD} maxLength={140} placeholder={t('標題／題目（例如學校＋題目）', 'Title / prompt (e.g. school + prompt)', '标题／题目（例如学校＋题目）')} value={f.title || ''} onChange={(e) => set('title', e.target.value)} />
+          <textarea style={Object.assign({}, US_FLD, { minHeight: 160 })} placeholder={t('在這裡寫你的 Essay。AI 教練只引導、不代寫。', 'Write your essay here. The AI coach guides, never writes it for you.', '在这里写你的 Essay。AI 教练只引导、不代写。')} value={f.text || ''} onChange={(e) => set('text', e.target.value)} />
+          <div style={US_MUTED}>{usWordCount(f.text)} {t('字', 'words', '词')}{(f.kind || 'personal') === 'personal' ? ' / 650' : ''}</div>
+          <div style={{ marginTop: 8 }}>
+            <button style={US_BTN} disabled={busy} onClick={save}>{busy ? t('儲存中…', 'Saving…', '保存中…') : t('儲存', 'Save', '保存')}</button>
+            <button style={{ marginLeft: 8, border: 'none', background: 'none', cursor: 'pointer' }} onClick={cancel}>{t('取消', 'Cancel', '取消')}</button>
+          </div>
+        </div>
+      )}
+
+      <p style={{ fontSize: '.76rem', color: '#5a6378', marginTop: 20 }}>
+        {t('欄位與上限對齊 Common App（活動 10、榮譽 5、主文書 650 字）。AI 只引導不代寫、不代送、不保證錄取。', 'Fields and limits follow the Common App (10 activities, 5 honors, 650-word personal statement). The AI guides only — it never writes or submits for you, and never guarantees admission.', '字段与上限对齐 Common App（活动 10、荣誉 5、主文书 650 词）。AI 只引导不代写、不代送、不保证录取。')}
+      </p>
+    </div>
+  );
+}
+
 /* ============ App ============ */
 
 export default function App() {
@@ -283,10 +473,12 @@ export default function App() {
     return <Onboarding student={student} onDone={(u) => { setStudent(u); setEditAnchor(false); }} />;
   }
   const enUS = student.school_type === 'us';
+  const appLang = APP_LANG0 || (enUS ? 'en' : 'zh-TW');
+  const T3 = (zh, en, cn) => (appLang === 'en' ? en : appLang === 'zh-CN' ? cn : zh);
   const tabs = isTeacher
     ? [['students', '學生總表'], ['deadlines', '時程管理'], ['reminders', '提醒']]
     : (enUS
-      ? [['dashboard', 'Overview'], ['artifacts', 'Vault'], ['college', 'College'], ['timeline', 'Timeline']]
+      ? [['dashboard', T3('總覽', 'Overview', '总览')], ['artifacts', T3('素材倉庫', 'Vault', '素材仓库')], ['college', T3('選校', 'College', '选校')], ['timeline', T3('時程', 'Timeline', '时程')]]
       : [['dashboard', '總覽'], ['artifacts', '素材倉庫'], ['college', '選校'], ['timeline', '時程']]);
 
   return (
@@ -295,13 +487,13 @@ export default function App() {
         <div className="brand">
           TIPS 學習歷程<small>{student.name}{isTeacher ? '（老師）' : ''}</small>
         </div>
-        {!isTeacher && <button onClick={() => setEditAnchor(true)}>{enUS ? 'Focus' : '科別／組別'}</button>}
-        <button onClick={() => { setToken(null); setStudent(null); }}>{enUS ? 'Log out' : '登出'}</button>
+        {!isTeacher && <button onClick={() => setEditAnchor(true)}>{enUS ? T3('方向', 'Focus', '方向') : '科別／組別'}</button>}
+        <button onClick={() => { setToken(null); setStudent(null); }}>{enUS ? T3('登出', 'Log out', '登出') : '登出'}</button>
       </header>
 
-      {!isTeacher && tab === 'dashboard' && <Dashboard student={student} onQuickAdd={goQuickAdd} />}
+      {!isTeacher && tab === 'dashboard' && (enUS ? <USOverview student={student} lang={appLang} /> : <Dashboard student={student} onQuickAdd={goQuickAdd} />)}
       {!isTeacher && tab === 'artifacts' && <Artifacts student={student} autoOpen={quickAdd} onAutoOpenDone={() => setQuickAdd(null)} />}
-      {!isTeacher && tab === 'college' && <CollegeMatch student={student} />}
+      {!isTeacher && tab === 'college' && <CollegeMatch student={student} lang={appLang} />}
       {!isTeacher && tab === 'timeline' && <Timeline />}
       {isTeacher && tab === 'students' && <TeacherStudents />}
       {isTeacher && tab === 'deadlines' && <TeacherDeadlines />}
