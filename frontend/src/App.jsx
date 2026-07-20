@@ -359,11 +359,11 @@ function USOverview({ student, lang }) {
           <input style={US_FLD} maxLength={100} placeholder={t('組織名稱（≤100 字）', 'Organization (≤100 chars)', '组织名称（≤100 字）')} value={f.org || ''} onChange={(e) => set('org', e.target.value)} />
           <textarea style={Object.assign({}, US_FLD, { minHeight: 60 })} maxLength={150} placeholder={t('描述你的貢獻與影響（≤150 字，Common App 上限）', 'Describe your impact (≤150 chars, Common App limit)', '描述你的贡献与影响（≤150 字，Common App 上限）')} value={f.description || ''} onChange={(e) => set('description', e.target.value)} />
           <div style={US_MUTED}>{(f.description || '').length}/150</div>
-          <div style={{ margin: '8px 0' }}>
-            <span style={US_MUTED}>{t('年級：', 'Grades: ', '年级：')}</span>
+          <div style={{ margin: '10px 0', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+            <span style={US_MUTED}>{t('年級', 'Grades', '年级')}</span>
             {grades.map((g) => (
-              <label key={g} style={{ marginRight: 10, fontSize: '.9rem' }}>
-                <input type="checkbox" checked={(f.grades || []).indexOf(g) >= 0} onChange={() => toggleGrade(g)} /> {g}
+              <label key={g} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '.92rem', margin: 0 }}>
+                <input type="checkbox" style={{ width: 'auto', margin: 0 }} checked={(f.grades || []).indexOf(g) >= 0} onChange={() => toggleGrade(g)} /> {g}
               </label>
             ))}
           </div>
@@ -373,9 +373,16 @@ function USOverview({ student, lang }) {
             <option value="All year">{t('全年', 'All year', '全年')}</option>
           </select>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            <input style={US_FLD} type="number" min="0" placeholder={t('每週時數', 'Hours/week', '每周时数')} value={f.hours || ''} onChange={(e) => set('hours', e.target.value)} />
-            <input style={US_FLD} type="number" min="0" placeholder={t('每年週數', 'Weeks/year', '每年周数')} value={f.weeks || ''} onChange={(e) => set('weeks', e.target.value)} />
+            <div>
+              <div style={US_MUTED}>{t('每週時數', 'Hours per week', '每周时数')}</div>
+              <input style={US_FLD} type="number" min="0" value={f.hours || ''} onChange={(e) => set('hours', e.target.value)} />
+            </div>
+            <div>
+              <div style={US_MUTED}>{t('每年週數', 'Weeks per year', '每年周数')}</div>
+              <input style={US_FLD} type="number" min="0" value={f.weeks || ''} onChange={(e) => set('weeks', e.target.value)} />
+            </div>
           </div>
+          <div style={US_MUTED}>{t('例：一週 5 小時 × 一年 30 週。這是「投入強度」，不是做了幾年。', 'e.g. 5 hrs/week × 30 weeks/year — this is your time commitment, not total years.', '例：一周 5 小时 × 一年 30 周。这是「投入强度」，不是做了几年。')}</div>
           <div style={{ marginTop: 8 }}>
             <button style={US_BTN} disabled={busy} onClick={save}>{busy ? t('儲存中…', 'Saving…', '保存中…') : t('儲存', 'Save', '保存')}</button>
             <button style={{ marginLeft: 8, border: 'none', background: 'none', cursor: 'pointer' }} onClick={cancel}>{t('取消', 'Cancel', '取消')}</button>
@@ -517,6 +524,8 @@ const VOC_COMMON = ['電機科','電子科','資訊科','控制科','冷凍空�
 function Onboarding({ student, onDone }) {
   const isUS = student.school_type === 'us';
   const isVoc = student.school_type === 'vocational';
+  const ol = APP_LANG0 || (isUS ? 'en' : 'zh-TW');
+  const ot = (zh, en, cn) => (ol === 'en' ? en : ol === 'zh-CN' ? cn : zh);
   const [anchor, setAnchor] = useState(student.focus_anchor || '');
   const [rigor, setRigor] = useState(student.rigor_track || '');
   const [busy, setBusy] = useState(false);
@@ -539,7 +548,7 @@ function Onboarding({ student, onDone }) {
   return (
     <div className="shell">
       <div className="login-card" style={{ maxWidth: 460, margin: '40px auto' }}>
-        <h1>先設定一下 👋</h1>
+        <h1>{ot('先設定一下 👋', 'Set up in 10 seconds 👋', '先设置一下 👋')}</h1>
 
         {isVoc && (
           <>
@@ -565,8 +574,8 @@ function Onboarding({ student, onDone }) {
 
         {isUS && (
           <>
-            <p className="sub">Pick the direction you lean toward — you can change it anytime.</p>
-            <label htmlFor="ob-a">Intended focus</label>
+            <p className="sub">{ot('選一個你比較傾向的方向——之後隨時能改。', 'Pick the direction you lean toward — you can change it anytime.', '选一个你比较倾向的方向——之后随时能改。')}</p>
+            <label htmlFor="ob-a">{ot('主修方向', 'Intended focus (general major direction)', '主修方向')}</label>
             <select id="ob-a" value={anchor} onChange={(e) => setAnchor(e.target.value)}>
               <option value="">Select…</option>
               <option value="cs">CS / Engineering</option>
@@ -576,7 +585,7 @@ function Onboarding({ student, onDone }) {
               <option value="arts">Arts / Design</option>
               <option value="explore">Still exploring</option>
             </select>
-            <label htmlFor="ob-r">Highest course rigor available（選填）</label>
+            <label htmlFor="ob-r">{ot('最高可修課程嚴謹度（選填）', 'Highest course rigor available (optional)', '最高可修课程严谨度（选填）')}</label>
             <select id="ob-r" value={rigor} onChange={(e) => setRigor(e.target.value)}>
               <option value="">—</option>
               <option value="honors">Honors</option>
@@ -590,7 +599,7 @@ function Onboarding({ student, onDone }) {
 
         {err && <p className="err">{err}</p>}
         <button className="btn cta-big" disabled={busy} onClick={save} style={{ marginTop: 16 }}>
-          {busy ? '儲存中…' : '完成，開始使用'}
+          {busy ? ot('儲存中…', 'Saving…', '保存中…') : ot('完成，開始使用', 'Done — start using it', '完成，开始使用')}
         </button>
       </div>
     </div>
