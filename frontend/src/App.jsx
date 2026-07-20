@@ -296,14 +296,16 @@ function USOverview({ student, lang }) {
   const [open, setOpen] = useState('');   // '' | 'activity' | 'honor' | 'essay'
   const [f, setF] = useState({});
   const [editId, setEditId] = useState('');
+  const [coachBusy, setCoachBusy] = useState(false);
+  const [coachOut, setCoachOut] = useState('');
 
   useEffect(() => { reload(); }, []);
   function reload() { return api('usList', {}).then(setRecs).catch((e) => setErr(e.message)); }
   const byKind = (k) => (recs || []).filter((r) => r.kind === k);
   const set = (k, v) => setF(Object.assign({}, f, { [k]: v }));
-  function startAdd(kind, defaults) { setOpen(kind); setF(defaults || {}); setEditId(''); setErr(''); }
-  function startEdit(rec) { setOpen(rec.kind); setF(Object.assign({}, rec.data)); setEditId(rec.id); setErr(''); }
-  function cancel() { setOpen(''); setF({}); setEditId(''); }
+  function startAdd(kind, defaults) { setOpen(kind); setF(defaults || {}); setEditId(''); setErr(''); setCoachOut(''); }
+  function startEdit(rec) { setOpen(rec.kind); setF(Object.assign({}, rec.data)); setEditId(rec.id); setErr(''); setCoachOut(''); }
+  function cancel() { setOpen(''); setF({}); setEditId(''); setCoachOut(''); }
   async function save() {
     setBusy(true); setErr('');
     try { await api('usSave', { kind: open, data: f, id: editId || undefined }); await reload(); cancel(); }
@@ -311,6 +313,13 @@ function USOverview({ student, lang }) {
     setBusy(false);
   }
   async function remove(id) { setErr(''); try { await api('usRemove', { id }); await reload(); } catch (e) { setErr(e.message); } }
+  async function askCoach() {
+    if (!String(f.text || '').trim()) { setCoachOut(t('先寫幾句再問教練。', 'Write a few lines first, then ask the coach.', '先写几句再问教练。')); return; }
+    setCoachBusy(true); setCoachOut('');
+    try { const d = await api('essayCoach', { text: f.text, title: f.title || '', id: editId || '' }); setCoachOut(d.text); }
+    catch (e) { setCoachOut((t('教練暫時無法回應：', 'Coach unavailable: ', '教练暂时无法回应：')) + e.message); }
+    setCoachBusy(false);
+  }
 
   if (err && !recs) return <p style={{ color: '#b3261e' }}>{err}</p>;
   if (!recs) return <p style={{ color: '#5a6378' }}>{t('載入中…', 'Loading…', '载入中…')}</p>;
@@ -450,6 +459,12 @@ function USOverview({ student, lang }) {
           <textarea style={Object.assign({}, US_FLD, { minHeight: 160 })} placeholder={t('在這裡寫你的 Essay。AI 教練只引導、不代寫。', 'Write your essay here. The AI coach guides, never writes it for you.', '在这里写你的 Essay。AI 教练只引导、不代写。')} value={f.text || ''} onChange={(e) => set('text', e.target.value)} />
           <div style={US_MUTED}>{usWordCount(f.text)} {t('字', 'words', '词')}{(f.kind || 'personal') === 'personal' ? ' / 650' : ''}</div>
           <div style={{ marginTop: 8 }}>
+            <button style={{ background: '#ffde59', color: '#16233b', border: 'none', borderRadius: 9, padding: '9px 16px', fontWeight: 800, cursor: 'pointer' }} disabled={coachBusy} onClick={askCoach}>
+              {coachBusy ? t('教練思考中…', 'Coach is thinking…', '教练思考中…') : t('✦ 問教練（給問題，不代寫）', '✦ Ask the coach (questions, not a draft)', '✦ 问教练（给问题，不代写）')}
+            </button>
+          </div>
+          {coachOut && <div style={{ background: '#fffbe6', border: '1.5px solid #ffde59', borderRadius: 10, padding: '12px 14px', marginTop: 8, fontSize: '.9rem', whiteSpace: 'pre-wrap' }}>{coachOut}</div>}
+          <div style={{ marginTop: 10 }}>
             <button style={US_BTN} disabled={busy} onClick={save}>{busy ? t('儲存中…', 'Saving…', '保存中…') : t('儲存', 'Save', '保存')}</button>
             <button style={{ marginLeft: 8, border: 'none', background: 'none', cursor: 'pointer' }} onClick={cancel}>{t('取消', 'Cancel', '取消')}</button>
           </div>
