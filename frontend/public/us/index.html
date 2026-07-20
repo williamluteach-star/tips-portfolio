@@ -489,10 +489,10 @@ function setLang(code) {
   if (sel) sel.value = code === 'en' ? 'en' : code;
   updateAppLinks();
 }
-// 美國產品一律英文：不管介紹頁選繁/簡，進 App 的連結永遠帶 ?lang=en
+// 美國入口：進 App 的連結永遠帶 ?m=us（美國市場＝英文四年美國骨架，與台灣完全分開）
 function updateAppLinks() {
   document.querySelectorAll('a[href^="https://portfolio.tips-edu.com/"]').forEach(function (a) {
-    try { var u = new URL(a.getAttribute('href')); u.searchParams.set('lang', 'en'); a.setAttribute('href', u.toString()); } catch (e) {}
+    try { var u = new URL(a.getAttribute('href')); u.searchParams.set('m', 'us'); a.setAttribute('href', u.toString()); } catch (e) {}
   });
 }
 updateAppLinks();
