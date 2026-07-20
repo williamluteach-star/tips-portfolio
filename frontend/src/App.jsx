@@ -246,10 +246,15 @@ function Onboarding({ student, onDone }) {
 /* ============ 登入 ============ */
 
 function Login({ onDone }) {
+  const [mode, setMode] = useState('login'); // 'login' | 'signup' | 'created'
   const [studentId, setStudentId] = useState('');
   const [loginCode, setLoginCode] = useState('');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [grade, setGrade] = useState('9');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [created, setCreated] = useState(null);
 
   async function submit() {
     setBusy(true); setErr('');
@@ -257,24 +262,73 @@ function Login({ onDone }) {
       const data = await api('login', { studentId, loginCode });
       setToken(data.token);
       onDone(data.student);
-    } catch (e) {
-      setErr(e.message);
-    } finally {
-      setBusy(false);
-    }
+    } catch (e) { setErr(e.message); } finally { setBusy(false); }
+  }
+
+  async function signup() {
+    if (!name.trim() || email.indexOf('@') < 1) { setErr('Please enter the student\'s name and a valid email.'); return; }
+    setBusy(true); setErr('');
+    try {
+      const d = await api('signup', { name: name.trim(), email: email.trim(), grade });
+      setCreated(d);
+      setMode('created');
+    } catch (e) { setErr(e.message); } finally { setBusy(false); }
+  }
+
+  function enterApp() {
+    setToken(created.token);
+    onDone(created.student);
   }
 
   return (
     <div className="login-wrap">
       <div className="login-card">
-        <h1>把三年的努力，<br /><span className="hl">一格一格存下來</span></h1>
-        <p className="sub">TIPS 學習歷程平台 — 素材隨手存，備審不慌張</p>
-        <label htmlFor="sid">學號</label>
-        <input id="sid" value={studentId} onChange={(e) => setStudentId(e.target.value)} placeholder="S000123" autoComplete="username" />
-        <label htmlFor="code">登入代碼</label>
-        <input id="code" value={loginCode} onChange={(e) => setLoginCode(e.target.value)} placeholder="老師發給你的 8 碼代碼" autoComplete="current-password" />
-        <button className="btn" onClick={submit} disabled={busy}>{busy ? '登入中…' : '登入'}</button>
-        {err && <p className="err">{err}</p>}
+        {mode === 'login' && (
+          <>
+            <h1>把三年的努力，<br /><span className="hl">一格一格存下來</span></h1>
+            <p className="sub">TIPS 學習歷程平台 — 素材隨手存，備審不慌張</p>
+            <label htmlFor="sid">學號 / Student ID</label>
+            <input id="sid" value={studentId} onChange={(e) => setStudentId(e.target.value)} placeholder="S000123 / US000123" autoComplete="username" />
+            <label htmlFor="code">登入代碼 / Login code</label>
+            <input id="code" value={loginCode} onChange={(e) => setLoginCode(e.target.value)} placeholder="8 碼代碼 / 8-character code" autoComplete="current-password" />
+            <button className="btn" onClick={submit} disabled={busy}>{busy ? '登入中… / Signing in…' : '登入 / Log in'}</button>
+            {err && <p className="err">{err}</p>}
+            <button className="btn-sm" style={{ marginTop: 14 }} onClick={() => { setErr(''); setMode('signup'); }}>New family? Sign up free →</button>
+          </>
+        )}
+
+        {mode === 'signup' && (
+          <>
+            <h1>Start free 👋</h1>
+            <p className="sub">Create your student account and capture the real work over four years. No credit card.</p>
+            <label htmlFor="su-name">Student's name</label>
+            <input id="su-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Maya Chen" />
+            <label htmlFor="su-email">Parent or student email</label>
+            <input id="su-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" autoComplete="email" />
+            <label htmlFor="su-grade">Current grade</label>
+            <select id="su-grade" value={grade} onChange={(e) => setGrade(e.target.value)}>
+              <option value="9">Grade 9</option>
+              <option value="10">Grade 10</option>
+              <option value="11">Grade 11</option>
+              <option value="12">Grade 12</option>
+            </select>
+            <button className="btn" style={{ marginTop: 14 }} onClick={signup} disabled={busy}>{busy ? 'Creating…' : 'Create free account'}</button>
+            {err && <p className="err">{err}</p>}
+            <button className="btn-sm" style={{ marginTop: 14 }} onClick={() => { setErr(''); setMode('login'); }}>← Already have an account? Log in</button>
+          </>
+        )}
+
+        {mode === 'created' && created && (
+          <>
+            <h1>You're in 🎉</h1>
+            <p className="sub">Save your login — you'll use it next time to sign in:</p>
+            <div style={{ background: '#fff', border: '1.5px solid var(--ink)', borderRadius: 10, padding: '12px 14px', margin: '6px 0 14px' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.95rem' }}>Student ID: <b>{created.studentId}</b></div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.95rem', marginTop: 4 }}>Login code: <b>{created.loginCode}</b></div>
+            </div>
+            <button className="btn" onClick={enterApp}>Continue →</button>
+          </>
+        )}
       </div>
     </div>
   );
