@@ -487,16 +487,15 @@ function setLang(code) {
   document.documentElement.lang = code === 'zh-TW' ? 'zh-Hant' : code === 'zh-CN' ? 'zh-Hans' : 'en';
   const sel = document.querySelector('select[name=lang]');
   if (sel) sel.value = code === 'en' ? 'en' : code;
-  updateAppLinks(code);
+  updateAppLinks();
 }
-// 把介紹頁選的語言帶進 App（同網域：localStorage ＋ 連結加 ?lang）
-function updateAppLinks(code) {
-  try { localStorage.setItem('tips_lang', code); } catch (e) {}
+// 美國產品一律英文：不管介紹頁選繁/簡，進 App 的連結永遠帶 ?lang=en
+function updateAppLinks() {
   document.querySelectorAll('a[href^="https://portfolio.tips-edu.com/"]').forEach(function (a) {
-    try { var u = new URL(a.getAttribute('href')); u.searchParams.set('lang', code); a.setAttribute('href', u.toString()); } catch (e) {}
+    try { var u = new URL(a.getAttribute('href')); u.searchParams.set('lang', 'en'); a.setAttribute('href', u.toString()); } catch (e) {}
   });
 }
-updateAppLinks('en');
+updateAppLinks();
 
 async function submitWL(ev) {
   ev.preventDefault();
