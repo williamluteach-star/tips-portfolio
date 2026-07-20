@@ -263,26 +263,18 @@
       </div>
       <div class="grid2">
         <div>
-          <label data-i18n="l_app">WeChat / WhatsApp (optional)</label>
-          <select name="contactApp">
+          <label data-i18n="l_app">WeChat / WhatsApp (required)</label>
+          <select name="contactApp" required>
             <option value="">—</option><option value="wechat">WeChat</option><option value="whatsapp">WhatsApp</option>
           </select>
         </div>
         <div>
-          <label data-i18n="l_appid">ID / handle (optional)</label>
-          <input name="contactId" maxlength="80" />
+          <label data-i18n="l_appid">ID / number (required)</label>
+          <input name="contactId" required maxlength="80" />
         </div>
       </div>
-      <div class="grid2">
-        <div>
-          <label data-i18n="l_phone">Phone number (optional)</label>
-          <input name="phone" type="tel" maxlength="40" autocomplete="tel" />
-        </div>
-        <div>
-          <label data-i18n="l_wa">WhatsApp number (optional)</label>
-          <input name="whatsapp" type="tel" maxlength="40" />
-        </div>
-      </div>
+      <label data-i18n="l_phone">Phone number (required)</label>
+      <input name="phone" type="tel" required maxlength="40" autocomplete="tel" />
       <label data-i18n="l_notes">Anything you want us to know? (optional)</label>
       <textarea name="notes" rows="2" maxlength="500"></textarea>
       <div class="hp"><label>Website</label><input name="website" tabindex="-1" autocomplete="off" /></div>
@@ -340,10 +332,10 @@ const ZH_TW = {
   l_grad: '孩子預計高中畢業年',
   l_grad_other: '還不確定',
   l_lang: '偏好語言',
-  l_app: 'WeChat / WhatsApp（選填）',
-  l_appid: 'ID / 帳號（選填）',
-  l_phone: '電話號碼（選填）',
-  l_wa: 'WhatsApp 號碼（選填）',
+  l_app: 'WeChat / WhatsApp（必填）',
+  l_appid: 'ID / 號碼（必填）',
+  l_phone: '電話號碼（必填）',
+  l_wa: 'WhatsApp 號碼（必填）',
   l_notes: '想讓我們知道的事（選填）',
   form_btn: '加入候補名單',
   msg_ok: '收到！我們會在開放早期名額時通知你 🎉',
@@ -388,10 +380,10 @@ const ZH_CN = {
   l_grad: '孩子预计高中毕业年',
   l_grad_other: '还不确定',
   l_lang: '偏好语言',
-  l_app: 'WeChat / WhatsApp（选填）',
-  l_appid: 'ID / 账号（选填）',
-  l_phone: '电话号码（选填）',
-  l_wa: 'WhatsApp 号码（选填）',
+  l_app: 'WeChat / WhatsApp（必填）',
+  l_appid: 'ID / 号码（必填）',
+  l_phone: '电话号码（必填）',
+  l_wa: 'WhatsApp 号码（必填）',
   l_notes: '想让我们知道的事（选填）',
   form_btn: '加入候补名单',
   msg_ok: '收到！我们会在开放早期名额时通知你 🎉',
@@ -430,10 +422,10 @@ async function submitWL(ev) {
   btn.disabled = true; btn.style.opacity = .6; msg.className = 'form-msg';
   const payload = {};
   new FormData(f).forEach((v, k) => { payload[k] = v; });
-  // 電話 / WhatsApp 併入 notes，確保現有後端就能收到（無需改後端）；日後若後端加欄位也相容
+  // 電話 / 通訊軟體併入 notes，確保現有後端就能收到（無需改後端）；日後若後端加欄位也相容
   const _c = [];
   if (payload.phone) _c.push('電話 ' + payload.phone);
-  if (payload.whatsapp) _c.push('WhatsApp ' + payload.whatsapp);
+  if (payload.contactApp && payload.contactId) _c.push(payload.contactApp + ' ' + payload.contactId);
   if (_c.length) payload.notes = '［聯絡］' + _c.join('　') + (payload.notes ? '\n' + payload.notes : '');
   try {
     const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'waitlist', payload }) });
