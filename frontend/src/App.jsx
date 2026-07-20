@@ -114,12 +114,16 @@ export default function App() {
   const [student, setStudent] = useState(null);
   const [tab, setTab] = useState('dashboard');
   const [quickAdd, setQuickAdd] = useState(null); // null | { semester }
+  const [editAnchor, setEditAnchor] = useState(false);
 
   function goQuickAdd(semester) { setQuickAdd({ semester: semester || null }); setTab('artifacts'); }
 
   if (!student) return <Login onDone={(u) => { setStudent(u); setTab(u.role === 'teacher' ? 'students' : 'dashboard'); }} />;
 
   const isTeacher = student.role === 'teacher';
+  if (!isTeacher && (!student.focus_anchor || editAnchor)) {
+    return <Onboarding student={student} onDone={(u) => { setStudent(u); setEditAnchor(false); }} />;
+  }
   const tabs = isTeacher
     ? [['students', '學生總表'], ['deadlines', '時程管理'], ['reminders', '提醒']]
     : [['dashboard', '總覽'], ['artifacts', '素材倉庫'], ['timeline', '時程']];
@@ -130,6 +134,7 @@ export default function App() {
         <div className="brand">
           TIPS 學習歷程<small>{student.name}{isTeacher ? '（老師）' : ''}</small>
         </div>
+        {!isTeacher && <button onClick={() => setEditAnchor(true)}>科別／組別</button>}
         <button onClick={() => { setToken(null); setStudent(null); }}>登出</button>
       </header>
 
@@ -147,6 +152,71 @@ export default function App() {
           </button>
         ))}
       </nav>
+    </div>
+  );
+}
+
+/* ============ 首次設定：主方向錨 ============ */
+const ANCHOR_CONF = {
+  vocational: {
+    label: '你的科別', hint: '選你的科，教練才知道該建議什麼專題、證照與實習成果。',
+    options: [['電機科', '電機科'], ['電子科', '電子科'], ['資料處理科', '資料處理科'],
+      ['餐飲科', '餐飲科'], ['設計/廣設科', '設計／廣告設計科'], ['__default', '其他 / 先略過']],
+  },
+  academic: {
+    label: '你的類組', hint: '高二才分組，高一可先選「未分組」。教練會依方向給建議。',
+    options: [['science', '自然組'], ['social', '社會組'], ['undecided', '高一 / 未分組']],
+  },
+  us: {
+    label: 'Intended focus', hint: 'Pick the direction you lean toward — you can change it anytime.',
+    options: [['cs', 'CS / Engineering'], ['premed', 'Life Sciences / Pre-med'], ['biz', 'Business / Economics'],
+      ['hum', 'Humanities / Social Science'], ['arts', 'Arts / Design'], ['explore', 'Still exploring']],
+  },
+};
+const RIGOR_CONF = [['', '—'], ['honors', 'Honors'], ['ap', 'AP'], ['ib', 'IB'], ['dual', 'Dual Enrollment'], ['regular', 'Regular only']];
+
+function Onboarding({ student, onDone }) {
+  const isUS = student.school_type === 'us';
+  const conf = ANCHOR_CONF[isUS ? 'us' : (student.school_type === 'vocational' ? 'vocational' : 'academic')];
+  const [anchor, setAnchor] = useState(student.focus_anchor || '');
+  const [rigor, setRigor] = useState(student.rigor_track || '');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  async function save(skip) {
+    const focus = skip ? conf.options[conf.options.length - 1][0] : anchor;
+    if (!focus) { setErr('請先選一個'); return; }
+    setBusy(true); setErr('');
+    try {
+      const u = await api('saveProfile', { focus_anchor: focus, ...(isUS ? { rigor_track: rigor } : {}) });
+      onDone(u);
+    } catch (e) { setErr(e.message); setBusy(false); }
+  }
+
+  return (
+    <div className="shell">
+      <div className="login-card" style={{ maxWidth: 460, margin: '40px auto' }}>
+        <h1>先設定一下 👋</h1>
+        <p className="sub">{conf.hint}</p>
+        <label htmlFor="ob-anchor">{conf.label}</label>
+        <select id="ob-anchor" value={anchor} onChange={(e) => setAnchor(e.target.value)}>
+          <option value="">請選擇…</option>
+          {conf.options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+        </select>
+        {isUS && (
+          <>
+            <label htmlFor="ob-rigor">Highest course rigor available（選填）</label>
+            <select id="ob-rigor" value={rigor} onChange={(e) => setRigor(e.target.value)}>
+              {RIGOR_CONF.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          </>
+        )}
+        {err && <p className="err">{err}</p>}
+        <button className="btn cta-big" disabled={busy} onClick={() => save(false)} style={{ marginTop: 16 }}>
+          {busy ? '儲存中…' : '完成，開始使用'}
+        </button>
+        <button className="btn-sm" onClick={() => save(true)} style={{ marginTop: 10 }}>先略過，之後再選</button>
+      </div>
     </div>
   );
 }
