@@ -6,7 +6,7 @@
 <title>TIPS College Application Companion — Turn Four Years of Real Work into a Standout Application</title>
 <meta name="description" content="A bilingual (English/中文) four-year companion that helps your teen capture and reflect on every project, award, and activity — so college applications tell a specific, authentic story built from real work. Open to any US applicant; built first with immigrant and Chinese-American families. By TIPS Education." />
 <meta property="og:title" content="TIPS College Application Companion — Specific beats generic in college admissions" />
-<meta property="og:description" content="Holistic review and AI essay-screening reward specific, authentic stories built from real work. Start capturing it in 9th grade, not the summer before deadlines. Join the founding-family waitlist." />
+<meta property="og:description" content="Holistic review and AI essay-screening reward specific, authentic stories built from real work. Start capturing it in 9th grade, not the summer before deadlines. Sign up free and start today." />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://portfolio.tips-edu.com/us/" />
 <link rel="canonical" href="https://portfolio.tips-edu.com/us/" />
@@ -58,6 +58,8 @@
     background: var(--navy); color: var(--cream); text-decoration: none;
     padding: 8px 18px; border-radius: 999px; font-size: .88rem; font-weight: 700;
   }
+  .nav-login { color: var(--navy); text-decoration: none; font-weight: 700; font-size: .88rem; }
+  .nav-login:hover { text-decoration: underline; }
 
   .hero { padding: 84px 0 60px; text-align: center; }
   .kicker {
@@ -136,6 +138,18 @@
   .form-msg.err { color: #b3261e; display: block; }
   .hp { position: absolute; left: -9999px; opacity: 0; height: 0; overflow: hidden; }
 
+  .faq { display: grid; gap: 12px; }
+  .faq details { background: #fff; border: 1.5px solid var(--line); border-radius: 12px; padding: 0 22px; }
+  .faq summary {
+    cursor: pointer; font-weight: 800; font-size: 1.02rem; padding: 18px 0;
+    list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after { content: '+'; font-size: 1.4rem; color: var(--ink-gray); font-weight: 700; line-height: 1; }
+  .faq details[open] summary::after { content: '\2013'; }
+  .faq details[open] summary { border-bottom: 1px solid var(--line); }
+  .faq .a { padding: 14px 0 20px; color: var(--navy-soft); font-size: .96rem; }
+
   footer { border-top: 2px solid var(--navy); padding: 30px 0 44px; margin-top: 40px; }
   footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; font-size: .85rem; color: var(--ink-gray); }
   footer a { color: var(--navy); }
@@ -152,19 +166,20 @@
         <button class="lang-btn" data-lang="zh-TW" onclick="setLang('zh-TW')">繁</button>
         <button class="lang-btn" data-lang="zh-CN" onclick="setLang('zh-CN')">简</button>
       </div>
-      <a class="nav-cta" href="#waitlist" data-i18n="nav_cta">Join Waitlist</a>
+      <a class="nav-login" href="https://portfolio.tips-edu.com/" data-i18n="nav_login">Log in</a>
+      <a class="nav-cta" href="https://portfolio.tips-edu.com/" data-i18n="nav_cta">Sign up free</a>
     </div>
   </div>
 </header>
 
 <section class="hero wrap">
-  <span class="kicker" data-i18n="kicker">Built for immigrant &amp; Chinese-American families · Grades 8–12</span>
+  <span class="kicker" data-i18n="kicker">Built for US high schoolers — especially immigrant &amp; Chinese-American families · Grades 8–12</span>
   <h1 data-i18n-html="h1">Build the application from <span class="hl">four years of real work</span>,<br />not the <span class="hl">summer before deadlines</span>.</h1>
   <p class="sub" data-i18n="hero_sub">A bilingual four-year companion that helps your teen capture, reflect on, and organize every project, award, and activity — so senior-year applications tell a specific, authentic story built from real work, not reconstructed from memory. Open to any student applying to US colleges — built first with the immigrant and Chinese-American families we know best.</p>
   <div class="cta-row">
-    <a href="#waitlist" class="btn-primary" data-i18n="hero_cta">Join the founding-family waitlist →</a>
+    <a href="https://portfolio.tips-edu.com/" class="btn-primary" data-i18n="hero_cta">Sign up free — start today →</a>
   </div>
-  <p class="note" data-i18n="hero_note">Free to join · Founding families get early pricing and direct input on the product</p>
+  <p class="note" data-i18n="hero_note">Free · No credit card · Set up in 2 minutes</p>
 </section>
 
 <section class="wrap">
@@ -224,69 +239,55 @@
   </div>
 </section>
 
-<section class="wrap" id="waitlist">
-  <div class="form-card">
-    <h2 data-i18n="form_t">Join the founding-family waitlist</h2>
-    <p class="fsub" data-i18n="form_sub">No commitment. We'll email you when early access opens, and founding families get lifetime early pricing.</p>
-    <form id="wl" onsubmit="return submitWL(event)">
-      <div class="role-row" id="roleRow">
-        <label class="active" data-role="parent"><input type="radio" name="role" value="parent" checked /><span data-i18n="role_parent">I'm a parent</span></label>
-        <label data-role="student"><input type="radio" name="role" value="student" /><span data-i18n="role_student">I'm a student</span></label>
-      </div>
-      <div class="grid2">
-        <div>
-          <label data-i18n="l_name">Name</label>
-          <input name="name" required maxlength="80" />
-        </div>
-        <div>
-          <label data-i18n="l_email">Email</label>
-          <input name="email" type="email" required maxlength="120" />
-        </div>
-      </div>
-      <div class="grid2">
-        <div>
-          <label data-i18n="l_grad">Student's expected HS graduation</label>
-          <select name="gradYear">
-            <option>2027</option><option>2028</option><option selected>2029</option>
-            <option>2030</option><option>2031</option><option>2032</option>
-            <option value="other" data-i18n="l_grad_other">Not sure yet</option>
-          </select>
-        </div>
-        <div>
-          <label data-i18n="l_lang">Preferred language</label>
-          <select name="lang">
-            <option value="en">English</option>
-            <option value="zh-TW">繁體中文</option>
-            <option value="zh-CN">简体中文</option>
-          </select>
-        </div>
-      </div>
-      <div class="grid2">
-        <div>
-          <label data-i18n="l_app">WeChat / WhatsApp (required)</label>
-          <select name="contactApp" required>
-            <option value="">—</option><option value="wechat">WeChat</option><option value="whatsapp">WhatsApp</option>
-          </select>
-        </div>
-        <div>
-          <label data-i18n="l_appid">ID / number (required)</label>
-          <input name="contactId" required maxlength="80" />
-        </div>
-      </div>
-      <label data-i18n="l_phone">Phone number (required)</label>
-      <input name="phone" type="tel" required maxlength="40" autocomplete="tel" />
-      <label data-i18n="l_notes">Anything you want us to know? (optional)</label>
-      <textarea name="notes" rows="2" maxlength="500"></textarea>
-      <div class="hp"><label>Website</label><input name="website" tabindex="-1" autocomplete="off" /></div>
-      <button class="btn-primary submit-btn" id="wlBtn" type="submit" data-i18n="form_btn">Join the waitlist</button>
-      <p class="form-msg" id="wlMsg"></p>
-    </form>
+<section class="wrap" id="faq">
+  <h2 class="section-title" data-i18n="faq_title">Questions parents ask</h2>
+  <p class="section-sub" data-i18n="faq_sub">Straight answers, before you sign up.</p>
+  <div class="faq">
+    <details>
+      <summary data-i18n="faq_q1">Is it really free?</summary>
+      <div class="a" data-i18n="faq_a1">Yes — completely free through our founding period, with no credit card required. We'll add affordable paid plans later, and founding families keep a locked-in early-bird price. You'll always see the price and agree to it before anything is ever charged.</div>
+    </details>
+    <details>
+      <summary data-i18n="faq_q2">Does the AI write my child's essays?</summary>
+      <div class="a" data-i18n="faq_a2">No. Our AI coach asks questions and helps your teen reflect — the writing stays in their own voice, and any AI assistance is disclosed transparently. Admissions offices now use AI to flag generic, template-written essays, so authentic writing built from real work is exactly what gets rewarded.</div>
+    </details>
+    <details>
+      <summary data-i18n="faq_q3">Do you guarantee admission, or fill out the application for us?</summary>
+      <div class="a" data-i18n="faq_a3">No — and be cautious of anyone who promises admission. We don't write or submit applications on a student's behalf. What we do is help your teen capture and organize four years of real work, so that when application season arrives, the story is specific, honest, and ready to tell.</div>
+    </details>
+    <details>
+      <summary data-i18n="faq_q4">What grade is the best time to start?</summary>
+      <div class="a" data-i18n="faq_a4">Eighth or ninth grade is ideal, because the whole point is to capture work as it happens instead of reconstructing it from memory. But any grade helps — even starting junior year beats scrambling the summer before deadlines.</div>
+    </details>
+    <details>
+      <summary data-i18n="faq_q5">Is our data private, and who owns it?</summary>
+      <div class="a" data-i18n="faq_a5">Your family's content is private to your account. You own what you upload, we never sell your data, and you can remove your material whenever you want.</div>
+    </details>
+    <details>
+      <summary data-i18n="faq_q6">We're not a Chinese-American family — is this for us?</summary>
+      <div class="a" data-i18n="faq_a6">Yes. TIPS is open to any student applying to US colleges. We built it first with the immigrant and Chinese-American families we know best, so the bilingual support and parent guides are unusually strong — but the four-year capture-and-reflect habit helps any applicant.</div>
+    </details>
+    <details>
+      <summary data-i18n="faq_q7">Does this replace our school counselor or private consultant?</summary>
+      <div class="a" data-i18n="faq_a7">No — it makes them more effective. TIPS is the capture-and-reflect layer underneath everything else. Bring your organized four-year record to whoever helps you apply, and their time goes to strategy instead of digging up what your teen did two years ago.</div>
+    </details>
+  </div>
+</section>
+
+<section class="wrap" id="start">
+  <div class="cred" style="text-align:center">
+    <h2 data-i18n="cta_t">Ready to start? It's free.</h2>
+    <p style="color:#c8cede;max-width:46em;margin:0 auto" data-i18n="cta_sub">Create your student account in about two minutes and start capturing the real work today — with an AI coach that guides, never writes. No credit card.</p>
+    <div style="margin-top:22px">
+      <a href="https://portfolio.tips-edu.com/" class="btn-primary" data-i18n="cta_btn">Sign up free →</a>
+    </div>
+    <p style="margin-top:16px;font-size:.9rem"><a href="https://portfolio.tips-edu.com/" style="color:var(--cream);text-decoration:underline" data-i18n="cta_login">Already a member? Log in</a></p>
   </div>
 </section>
 
 <footer>
   <div class="wrap">
-    <div>© TIPS Education 英典教育 · Taichung, Taiwan</div>
+    <div>© TIPS Education 英典教育 · California, USA</div>
     <div><a href="https://www.tips-edu.com" target="_blank" rel="noopener">tips-edu.com</a> · <a href="https://www.instagram.com/tipsedu2022" target="_blank" rel="noopener">Instagram</a> · <a href="https://www.facebook.com/tipsedu2022" target="_blank" rel="noopener">Facebook</a></div>
   </div>
 </footer>
@@ -296,12 +297,17 @@ const API = 'https://script.google.com/macros/s/AKfycbyQBIQCqtfJL0SjwBlwAsFKfHzI
 
 const ZH_TW = {
   brand_sub: '升學申請陪伴 · 美國版',
-  nav_cta: '加入候補名單',
-  kicker: '為移民與華人家庭而做 · 8–12 年級',
+  nav_cta: '免費註冊',
+  nav_login: '登入',
+  cta_t: '準備好了嗎？完全免費。',
+  cta_sub: '大約兩分鐘建立學生帳號，今天就開始把真實作品記錄下來——AI 教練只引導、不代寫。免信用卡。',
+  cta_btn: '免費註冊 →',
+  cta_login: '已經是會員了？登入',
+  kicker: '為全美高中生打造 — 特別懂移民與華人家庭 · 8–12 年級',
   h1: '用<span class="hl">四年的真實作品</span>堆出申請，<br />而不是<span class="hl">截止前一個暑假</span>硬拼。',
   hero_sub: '一套中英雙語的四年陪伴系統：幫孩子即時記錄、反思、整理每個專題、獎項與活動——讓高三申請能講出一個具體、真實、從真實作品長出來的故事，而不是靠回憶硬拼。開放給所有申請美國大學的學生——我們先從最熟悉的移民與華人家庭做起。',
-  hero_cta: '加入創始家庭候補名單 →',
-  hero_note: '加入免費 · 創始家庭享早鳥價格，並直接參與產品設計',
+  hero_cta: '免費註冊 — 今天就開始 →',
+  hero_note: '免費 · 免信用卡 · 兩分鐘完成',
   why_title: '為什麼是現在',
   why_sub: '美國大學申請的三個轉變，正在獎勵「邊做邊把故事留下來」的學生：',
   stat1_t: '具體，勝過空泛',
@@ -323,6 +329,22 @@ const ZH_TW = {
   cred_t: '我們在全世界最嚴格的學習歷程制度裡實戰過。',
   cred_p: 'TIPS 英典教育多年陪伴學生走過台灣的全國學習歷程制度——每位高中生每學期都必須把課程成果與活動證據上傳到政府資料庫，大學據此審查入學。我們打造了讓學生三年不斷線的軟體與教練體系。現在，我們把這套紀律帶到美國申請——在這裡，一個具體、真實的故事正成為決勝點。',
   cred_hl: '工具不會自己累積作品，習慣才會——而習慣需要陪伴。',
+  faq_title: '家長常問的問題',
+  faq_sub: '註冊之前，先給你直接的答案。',
+  faq_q1: '真的免費嗎？',
+  faq_a1: '是——創始期間完全免費，不需要信用卡。之後我們會推出平價方案，創始家庭可鎖定早鳥價。任何收費之前，你一定會先看到價格並同意，才會被扣款。',
+  faq_q2: 'AI 會幫我的孩子代寫文書嗎？',
+  faq_a2: '不會。我們的 AI 教練是用提問幫孩子反思——文字始終是孩子自己的聲音，而且任何 AI 協助都會透明揭露。現在招生端會用 AI 標記模板化、罐頭式的文書，所以「從真實作品長出來的真誠寫作」才是得分關鍵。',
+  faq_q3: '你們保證錄取、或幫我們把申請填好送出嗎？',
+  faq_a3: '不會——而且請對任何「保證錄取」的人保持警覺。我們不會代替學生撰寫或送出申請。我們做的是幫孩子把四年的真實作品記錄、整理好，讓申請季來臨時，故事既具體又真誠、隨時可以講出來。',
+  faq_q4: '幾年級開始最好？',
+  faq_a4: '八、九年級最理想，因為重點就是「邊做邊記」，而不是事後靠回憶硬拼。但任何年級開始都有幫助——就算高二才開始，也比截止前一個暑假才臨時抱佛腳好太多。',
+  faq_q5: '我們的資料是私密的嗎？誰擁有這些內容？',
+  faq_a5: '你家庭的內容只屬於你的帳號、是私密的。你上傳的東西所有權是你的，我們絕不販售你的資料，你也可以隨時移除自己的內容。',
+  faq_q6: '我們不是華人家庭，也適用嗎？',
+  faq_a6: '適用。TIPS 開放給所有申請美國大學的學生。我們先從最熟悉的移民與華人家庭做起，所以雙語支援與家長指南特別紮實——但「四年即時記錄＋反思」的習慣，對任何申請者都有幫助。',
+  faq_q7: '這會取代我們的學校輔導老師或私人顧問嗎？',
+  faq_a7: '不會——反而讓他們更有效率。TIPS 是墊在最底層的「記錄＋反思」層。把整理好的四年紀錄帶去給任何協助你申請的人，他們的時間就能花在策略上，而不是回頭挖孩子兩年前做了什麼。',
   form_t: '加入創始家庭候補名單',
   form_sub: '不需承諾。早期名額開放時我們會通知你，創始家庭享終身早鳥價。',
   role_parent: '我是家長',
@@ -344,12 +366,17 @@ const ZH_TW = {
 
 const ZH_CN = {
   brand_sub: '升学申请陪伴 · 美国版',
-  nav_cta: '加入候补名单',
-  kicker: '为移民与华人家庭而做 · 8–12 年级',
+  nav_cta: '免费注册',
+  nav_login: '登录',
+  cta_t: '准备好了吗？完全免费。',
+  cta_sub: '大约两分钟建立学生账号，今天就开始把真实作品记录下来——AI 教练只引导、不代写。免信用卡。',
+  cta_btn: '免费注册 →',
+  cta_login: '已经是会员了？登录',
+  kicker: '为全美高中生打造 — 特别懂移民与华人家庭 · 8–12 年级',
   h1: '用<span class="hl">四年的真实作品</span>堆出申请，<br />而不是<span class="hl">截止前一个暑假</span>硬拼。',
   hero_sub: '一套中英双语的四年陪伴系统：帮孩子即时记录、反思、整理每个项目、奖项与活动——让高三申请能讲出一个具体、真实、从真实作品长出来的故事，而不是靠回忆硬拼。开放给所有申请美国大学的学生——我们先从最熟悉的移民与华人家庭做起。',
-  hero_cta: '加入创始家庭候补名单 →',
-  hero_note: '加入免费 · 创始家庭享早鸟价格，并直接参与产品设计',
+  hero_cta: '免费注册 — 今天就开始 →',
+  hero_note: '免费 · 免信用卡 · 两分钟完成',
   why_title: '为什么是现在',
   why_sub: '美国大学申请的三个转变，正在奖励“边做边把故事留下来”的学生：',
   stat1_t: '具体，胜过空泛',
@@ -371,6 +398,22 @@ const ZH_CN = {
   cred_t: '我们在全世界最严格的学习档案制度里实战过。',
   cred_p: 'TIPS 英典教育多年陪伴学生走过台湾的全国学习历程制度——每位高中生每学期都必须把课程成果与活动证据上传到政府数据库，大学据此审查入学。我们打造了让学生三年不断线的软件与教练体系。现在，我们把这套纪律带到美国申请——在这里，一个具体、真实的故事正成为决胜点。',
   cred_hl: '工具不会自己积累作品，习惯才会——而习惯需要陪伴。',
+  faq_title: '家长常问的问题',
+  faq_sub: '注册之前，先给你直接的答案。',
+  faq_q1: '真的免费吗？',
+  faq_a1: '是——创始期间完全免费，不需要信用卡。之后我们会推出平价方案，创始家庭可锁定早鸟价。任何收费之前，你一定会先看到价格并同意，才会被扣款。',
+  faq_q2: 'AI 会帮我的孩子代写文书吗？',
+  faq_a2: '不会。我们的 AI 教练是用提问帮孩子反思——文字始终是孩子自己的声音，而且任何 AI 协助都会透明披露。现在招生端会用 AI 标记模板化、罐头式的文书，所以“从真实作品长出来的真诚写作”才是得分关键。',
+  faq_q3: '你们保证录取、或帮我们把申请填好送出吗？',
+  faq_a3: '不会——而且请对任何“保证录取”的人保持警觉。我们不会代替学生撰写或送出申请。我们做的是帮孩子把四年的真实作品记录、整理好，让申请季来临时，故事既具体又真诚、随时可以讲出来。',
+  faq_q4: '几年级开始最好？',
+  faq_a4: '八、九年级最理想，因为重点就是“边做边记”，而不是事后靠回忆硬拼。但任何年级开始都有帮助——就算高二才开始，也比截止前一个暑假才临时抱佛脚好太多。',
+  faq_q5: '我们的资料是私密的吗？谁拥有这些内容？',
+  faq_a5: '你家庭的内容只属于你的账号、是私密的。你上传的东西所有权是你的，我们绝不贩售你的资料，你也可以随时移除自己的内容。',
+  faq_q6: '我们不是华人家庭，也适用吗？',
+  faq_a6: '适用。TIPS 开放给所有申请美国大学的学生。我们先从最熟悉的移民与华人家庭做起，所以双语支持与家长指南特别扎实——但“四年即时记录＋反思”的习惯，对任何申请者都有帮助。',
+  faq_q7: '这会取代我们的学校辅导老师或私人顾问吗？',
+  faq_a7: '不会——反而让他们更有效率。TIPS 是垫在最底层的“记录＋反思”层。把整理好的四年纪录带去给任何协助你申请的人，他们的时间就能花在策略上，而不是回头挖孩子两年前做了什么。',
   form_t: '加入创始家庭候补名单',
   form_sub: '无需承诺。早期名额开放时我们会通知你，创始家庭享终身早鸟价。',
   role_parent: '我是家长',
@@ -407,13 +450,6 @@ function setLang(code) {
   const sel = document.querySelector('select[name=lang]');
   if (sel) sel.value = code === 'en' ? 'en' : code;
 }
-
-document.getElementById('roleRow').addEventListener('click', e => {
-  const lb = e.target.closest('label'); if (!lb) return;
-  document.querySelectorAll('#roleRow label').forEach(l => l.classList.remove('active'));
-  lb.classList.add('active');
-  lb.querySelector('input').checked = true;
-});
 
 async function submitWL(ev) {
   ev.preventDefault();
