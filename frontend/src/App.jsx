@@ -480,7 +480,7 @@ export default function App() {
     return <Onboarding student={student} onDone={(u) => { setStudent(u); setEditAnchor(false); }} />;
   }
   const enUS = student.school_type === 'us';
-  const appLang = APP_LANG0 || (enUS ? 'en' : 'zh-TW');
+  const appLang = enUS ? 'en' : (APP_LANG0 || 'zh-TW'); // 美國一律英文
   const T3 = (zh, en, cn) => (appLang === 'en' ? en : appLang === 'zh-CN' ? cn : zh);
   const tabs = isTeacher
     ? [['students', '學生總表'], ['deadlines', '時程管理'], ['reminders', '提醒']]
@@ -528,6 +528,8 @@ function Onboarding({ student, onDone }) {
   const ot = (zh, en, cn) => (ol === 'en' ? en : ol === 'zh-CN' ? cn : zh);
   const [anchor, setAnchor] = useState(student.focus_anchor || '');
   const [rigor, setRigor] = useState(student.rigor_track || '');
+  const [gradYear, setGradYear] = useState(student.grad_year || '');
+  const [testPlan, setTestPlan] = useState(student.test_plan || '');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
@@ -536,9 +538,10 @@ function Onboarding({ student, onDone }) {
     if (!focus) { setErr(isVoc ? '請輸入或選擇你的科別' : '請先選一個'); return; }
     setBusy(true); setErr('');
     try {
-      await api('saveProfile', { focus_anchor: focus, ...(isUS ? { rigor_track: rigor } : {}) });
+      const extra = isUS ? { rigor_track: rigor, grad_year: gradYear, test_plan: testPlan } : {};
+      await api('saveProfile', Object.assign({ focus_anchor: focus }, extra));
       // 用本地選的值直接放行，不依賴後端回傳（避免卡在設定頁）
-      onDone({ ...student, focus_anchor: focus, ...(isUS ? { rigor_track: rigor } : {}) });
+      onDone(Object.assign({}, student, { focus_anchor: focus }, extra));
     } catch (e) {
       setErr(e.message || '儲存失敗，請再試一次');
       setBusy(false);
@@ -593,6 +596,20 @@ function Onboarding({ student, onDone }) {
               <option value="ib">IB</option>
               <option value="dual">Dual Enrollment</option>
               <option value="regular">Regular only</option>
+            </select>
+            <label htmlFor="ob-y">Expected graduation year</label>
+            <select id="ob-y" value={gradYear} onChange={(e) => setGradYear(e.target.value)}>
+              <option value="">Select…</option>
+              {['2026', '2027', '2028', '2029', '2030', '2031', '2032'].map((y) => <option key={y} value={y}>{y}</option>)}
+            </select>
+            <label htmlFor="ob-t">Testing plan (SAT/ACT, for college admissions)</label>
+            <select id="ob-t" value={testPlan} onChange={(e) => setTestPlan(e.target.value)}>
+              <option value="">Select…</option>
+              <option value="sat">Planning to take the SAT</option>
+              <option value="act">Planning to take the ACT</option>
+              <option value="both">SAT &amp; ACT</option>
+              <option value="optional">Going test-optional (no scores)</option>
+              <option value="undecided">Undecided</option>
             </select>
           </>
         )}
