@@ -157,65 +157,87 @@ export default function App() {
 }
 
 /* ============ 首次設定：主方向錨 ============ */
-const ANCHOR_CONF = {
-  vocational: {
-    label: '你的科別', hint: '選你的科，教練才知道該建議什麼專題、證照與實習成果。',
-    options: [['電機科', '電機科'], ['電子科', '電子科'], ['資料處理科', '資料處理科'],
-      ['餐飲科', '餐飲科'], ['設計/廣設科', '設計／廣告設計科'], ['__default', '其他 / 先略過']],
-  },
-  academic: {
-    label: '你的類組', hint: '高二才分組，高一可先選「未分組」。教練會依方向給建議。',
-    options: [['science', '自然組'], ['social', '社會組'], ['undecided', '高一 / 未分組']],
-  },
-  us: {
-    label: 'Intended focus', hint: 'Pick the direction you lean toward — you can change it anytime.',
-    options: [['cs', 'CS / Engineering'], ['premed', 'Life Sciences / Pre-med'], ['biz', 'Business / Economics'],
-      ['hum', 'Humanities / Social Science'], ['arts', 'Arts / Design'], ['explore', 'Still exploring']],
-  },
-};
-const RIGOR_CONF = [['', '—'], ['honors', 'Honors'], ['ap', 'AP'], ['ib', 'IB'], ['dual', 'Dual Enrollment'], ['regular', 'Regular only']];
+/* 技高常見科別（datalist 快選；學生也可自己打，任何科教練都吃得到） */
+const VOC_COMMON = ['電機科','電子科','資訊科','控制科','冷凍空調科','機械科','模具科','製圖科','電腦機械製圖科','機電科','板金科','汽車科','飛機修護科','動力機械科','化工科','紡織科','土木科','建築科','消防工程科','商業經營科','資料處理科','會計事務科','國際貿易科','電子商務科','流通管理科','應用外語科','廣告設計科','室內設計科','美工科','圖文傳播科','多媒體設計科','農場經營科','園藝科','森林科','畜產保健科','食品加工科','烘焙科','水產食品科','家政科','服裝科','幼兒保育科','美容科','時尚模特兒科','觀光事業科','餐飲管理科','漁業科','水產養殖科','輪機科','航海科','音樂科','美術科','舞蹈科','戲劇科','表演藝術科','電影電視科','多媒體動畫科'];
 
 function Onboarding({ student, onDone }) {
   const isUS = student.school_type === 'us';
-  const conf = ANCHOR_CONF[isUS ? 'us' : (student.school_type === 'vocational' ? 'vocational' : 'academic')];
+  const isVoc = student.school_type === 'vocational';
   const [anchor, setAnchor] = useState(student.focus_anchor || '');
   const [rigor, setRigor] = useState(student.rigor_track || '');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
-  async function save(skip) {
-    const focus = skip ? conf.options[conf.options.length - 1][0] : anchor;
-    if (!focus) { setErr('請先選一個'); return; }
+  async function save() {
+    const focus = String(anchor || '').trim();
+    if (!focus) { setErr(isVoc ? '請輸入或選擇你的科別' : '請先選一個'); return; }
     setBusy(true); setErr('');
     try {
-      const u = await api('saveProfile', { focus_anchor: focus, ...(isUS ? { rigor_track: rigor } : {}) });
-      onDone(u);
-    } catch (e) { setErr(e.message); setBusy(false); }
+      await api('saveProfile', { focus_anchor: focus, ...(isUS ? { rigor_track: rigor } : {}) });
+      // 用本地選的值直接放行，不依賴後端回傳（避免卡在設定頁）
+      onDone({ ...student, focus_anchor: focus, ...(isUS ? { rigor_track: rigor } : {}) });
+    } catch (e) {
+      setErr(e.message || '儲存失敗，請再試一次');
+      setBusy(false);
+    }
   }
 
   return (
     <div className="shell">
       <div className="login-card" style={{ maxWidth: 460, margin: '40px auto' }}>
         <h1>先設定一下 👋</h1>
-        <p className="sub">{conf.hint}</p>
-        <label htmlFor="ob-anchor">{conf.label}</label>
-        <select id="ob-anchor" value={anchor} onChange={(e) => setAnchor(e.target.value)}>
-          <option value="">請選擇…</option>
-          {conf.options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-        </select>
-        {isUS && (
+
+        {isVoc && (
           <>
-            <label htmlFor="ob-rigor">Highest course rigor available（選填）</label>
-            <select id="ob-rigor" value={rigor} onChange={(e) => setRigor(e.target.value)}>
-              {RIGOR_CONF.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            <p className="sub">輸入你的科別，教練才知道該建議什麼專題、證照與實習成果。可以打字，或從常見清單挑。</p>
+            <label htmlFor="ob-a">你的科別</label>
+            <input id="ob-a" list="voc-list" value={anchor} onChange={(e) => setAnchor(e.target.value)} placeholder="例：電機科、汽車科、餐飲管理科" />
+            <datalist id="voc-list">{VOC_COMMON.map((s) => <option key={s} value={s} />)}</datalist>
+          </>
+        )}
+
+        {!isVoc && !isUS && (
+          <>
+            <p className="sub">高二才分組，高一可先選「未分組」。教練會依你的方向給建議。</p>
+            <label htmlFor="ob-a">你的類組</label>
+            <select id="ob-a" value={anchor} onChange={(e) => setAnchor(e.target.value)}>
+              <option value="">請選擇…</option>
+              <option value="science">自然組</option>
+              <option value="social">社會組</option>
+              <option value="undecided">高一 / 未分組</option>
             </select>
           </>
         )}
+
+        {isUS && (
+          <>
+            <p className="sub">Pick the direction you lean toward — you can change it anytime.</p>
+            <label htmlFor="ob-a">Intended focus</label>
+            <select id="ob-a" value={anchor} onChange={(e) => setAnchor(e.target.value)}>
+              <option value="">Select…</option>
+              <option value="cs">CS / Engineering</option>
+              <option value="premed">Life Sciences / Pre-med</option>
+              <option value="biz">Business / Economics</option>
+              <option value="hum">Humanities / Social Science</option>
+              <option value="arts">Arts / Design</option>
+              <option value="explore">Still exploring</option>
+            </select>
+            <label htmlFor="ob-r">Highest course rigor available（選填）</label>
+            <select id="ob-r" value={rigor} onChange={(e) => setRigor(e.target.value)}>
+              <option value="">—</option>
+              <option value="honors">Honors</option>
+              <option value="ap">AP</option>
+              <option value="ib">IB</option>
+              <option value="dual">Dual Enrollment</option>
+              <option value="regular">Regular only</option>
+            </select>
+          </>
+        )}
+
         {err && <p className="err">{err}</p>}
-        <button className="btn cta-big" disabled={busy} onClick={() => save(false)} style={{ marginTop: 16 }}>
+        <button className="btn cta-big" disabled={busy} onClick={save} style={{ marginTop: 16 }}>
           {busy ? '儲存中…' : '完成，開始使用'}
         </button>
-        <button className="btn-sm" onClick={() => save(true)} style={{ marginTop: 10 }}>先略過，之後再選</button>
       </div>
     </div>
   );
