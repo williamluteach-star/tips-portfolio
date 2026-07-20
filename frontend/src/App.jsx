@@ -138,6 +138,13 @@ function CollegeMatch({ student }) {
   useEffect(() => { api('listColleges').then(setSaved).catch(() => {}); }, []);
   const savedIds = new Set(saved.map((s) => String(s.college_id)));
   const ff = CM_FOCUS_FIELD[focus];
+  const EN = student.school_type === 'us';
+  const L = (zh, en) => (EN ? en : zh);
+  const FOCI_L = [
+    ['explore', L('還在探索', 'Still exploring')], ['cs', L('資訊 / 電腦科學', 'CS / Computer Science')],
+    ['premed', L('醫預科 / 生物', 'Pre-med / Biology')], ['biz', L('商學', 'Business')],
+    ['eng', L('工程', 'Engineering')], ['arts', L('藝術 / 表演', 'Arts / Performing')], ['hum', L('人文', 'Humanities')],
+  ];
 
   async function doSearch() {
     setBusy(true); setErr('');
@@ -165,43 +172,43 @@ function CollegeMatch({ student }) {
     <div className="pane collegematch" style={{ padding: '12px 4px 90px' }}>
       <h2 style={{ margin: '4px 0' }}>選校 · College Match</h2>
       <p style={{ color: '#5a6378', fontSize: '.9rem', margin: '0 0 12px' }}>
-        選你的焦點方向，把「這個領域強」的學校排前面——把聚焦延伸到聚焦選校。
+        {L('選你的焦點方向，把「這個領域強」的學校排前面——把聚焦延伸到聚焦選校。', 'Pick your focus and we surface schools strong in that area — turning your focus into a focused college list.')}
       </p>
 
       <div style={{ display: 'grid', gap: 8 }}>
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="學校名稱（可留空）e.g. Berkeley" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={L('學校名稱（可留空）e.g. Berkeley', 'School name (optional) e.g. Berkeley')} />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           <select value={stt} onChange={(e) => setStt(e.target.value)}>
-            {CM_STATES.map((s) => <option key={s} value={s}>{s || '所有州 State'}</option>)}
+            {CM_STATES.map((s) => <option key={s} value={s}>{s || L('所有州 State', 'All states')}</option>)}
           </select>
           <select value={sel} onChange={(e) => setSel(e.target.value)}>
-            <option value="">錄取難度：不限</option>
-            <option value="0..0.25">最競爭（&lt;25%）</option>
-            <option value="0.25..0.5">競爭（25–50%）</option>
-            <option value="0.5..1">較好上（&gt;50%）</option>
+            <option value="">{L('錄取難度：不限', 'Selectivity: any')}</option>
+            <option value="0..0.25">{L('最競爭（<25%）', 'Most selective (<25%)')}</option>
+            <option value="0.25..0.5">{L('競爭（25–50%）', 'Selective (25–50%)')}</option>
+            <option value="0.5..1">{L('較好上（>50%）', 'Less selective (>50%)')}</option>
           </select>
           <select value={size} onChange={(e) => setSize(e.target.value)}>
-            <option value="">規模：不限</option>
-            <option value="0..2500">小型（&lt;2,500）</option>
-            <option value="2500..15000">中型</option>
-            <option value="15000..">大型（&gt;15,000）</option>
+            <option value="">{L('規模：不限', 'Size: any')}</option>
+            <option value="0..2500">{L('小型（<2,500）', 'Small (<2,500)')}</option>
+            <option value="2500..15000">{L('中型', 'Medium')}</option>
+            <option value="15000..">{L('大型（>15,000）', 'Large (>15,000)')}</option>
           </select>
           <select value={focus} onChange={(e) => setFocus(e.target.value)}>
-            {CM_FOCI.map(([v, l]) => <option key={v} value={v}>焦點：{l}</option>)}
+            {FOCI_L.map(([v, l]) => <option key={v} value={v}>{L('焦點：', 'Focus: ')}{l}</option>)}
           </select>
         </div>
-        <button onClick={doSearch} disabled={busy} style={CM_BTN}>{busy ? '搜尋中…' : '搜尋學校'}</button>
+        <button onClick={doSearch} disabled={busy} style={CM_BTN}>{busy ? L('搜尋中…', 'Searching…') : L('搜尋學校', 'Search schools')}</button>
       </div>
 
-      {err && <p style={{ color: '#b3261e', fontSize: '.9rem' }}>讀取失敗：{err}</p>}
+      {err && <p style={{ color: '#b3261e', fontSize: '.9rem' }}>{L('讀取失敗：', 'Error: ')}{err}</p>}
 
       {saved.length > 0 && (
         <div style={{ margin: '16px 0', padding: '12px 14px', background: '#fff', border: '2px solid #16233b', borderRadius: 12 }}>
-          <b>我的選校清單（{saved.length}）</b>
+          <b>{L('我的選校清單', 'My college list')}（{saved.length}）</b>
           {saved.map((s) => (
             <div key={s.college_id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '6px 0', borderTop: '1px solid #eee', fontSize: '.9rem' }}>
               <span>{s.name} <span style={{ color: '#5a6378' }}>· {s.city}, {s.state}</span></span>
-              <button onClick={() => toggleSave({ id: s.college_id })} style={{ color: '#b3261e', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 800 }}>移除</button>
+              <button onClick={() => toggleSave({ id: s.college_id })} style={{ color: '#b3261e', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 800 }}>{L('移除', 'Remove')}</button>
             </div>
           ))}
         </div>
@@ -219,41 +226,41 @@ function CollegeMatch({ student }) {
                 <div style={{ color: '#5a6378', fontSize: '.85rem' }}>{c['school.city']}, {c['school.state']}</div>
               </div>
               <button onClick={() => toggleSave(c)} style={savedIds.has(id) ? CM_SAVE_ON : CM_SAVE_OFF}>
-                {savedIds.has(id) ? '✓ 已收藏' : '＋ 收藏'}
+                {savedIds.has(id) ? L('✓ 已收藏', '✓ Saved') : L('＋ 收藏', '＋ Save')}
               </button>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 14px', margin: '8px 0 2px', fontSize: '.84rem' }}>
-              <span><span style={{ color: '#5a6378' }}>錄取率 </span><b>{cmPct(c['latest.admissions.admission_rate.overall'])}</b></span>
-              <span><span style={{ color: '#5a6378' }}>SAT 平均 </span><b>{c['latest.admissions.sat_scores.average.overall'] || '—'}</b></span>
-              <span><span style={{ color: '#5a6378' }}>外州學費 </span><b>{cmMoney(c['latest.cost.tuition.out_of_state'])}</b></span>
-              <span><span style={{ color: '#5a6378' }}>學生數 </span><b>{cmNum(c['latest.student.size'])}</b></span>
+              <span><span style={{ color: '#5a6378' }}>{L('錄取率 ', 'Admit ')}</span><b>{cmPct(c['latest.admissions.admission_rate.overall'])}</b></span>
+              <span><span style={{ color: '#5a6378' }}>{L('SAT 平均 ', 'Avg SAT ')}</span><b>{c['latest.admissions.sat_scores.average.overall'] || '—'}</b></span>
+              <span><span style={{ color: '#5a6378' }}>{L('外州學費 ', 'Out-of-state ')}</span><b>{cmMoney(c['latest.cost.tuition.out_of_state'])}</b></span>
+              <span><span style={{ color: '#5a6378' }}>{L('學生數 ', 'Students ')}</span><b>{cmNum(c['latest.student.size'])}</b></span>
             </div>
             {ff && fitv != null && (
               <div style={{ fontSize: '.8rem', color: '#2a3a5c', marginTop: 4 }}>
-                {CM_FOCI.find((x) => x[0] === focus)[1]} 主修占比：<b>{cmPct(fitv)}</b>
+                {FOCI_L.find((x) => x[0] === focus)[1]}{L(' 主修占比：', ' major share: ')}<b>{cmPct(fitv)}</b>
               </div>
             )}
-            {url && <a href={/^https?:/.test(url) ? url : 'https://' + url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '.82rem', fontWeight: 700 }}>官方網站 · 送件與截止以官網為準 →</a>}
+            {url && <a href={/^https?:/.test(url) ? url : 'https://' + url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '.82rem', fontWeight: 700 }}>{L('官方網站 · 送件與截止以官網為準 →', 'Official site · apply & deadlines there →')}</a>}
           </div>
         );
       })}
 
-      {results && results.length === 0 && !busy && <p style={{ color: '#5a6378' }}>沒有符合的學校，放寬條件試試。</p>}
-      {results && results.length > 0 && <p style={{ color: '#5a6378', fontSize: '.82rem' }}>約 {total.toLocaleString()} 所符合，依焦點排序顯示前 {results.length} 所。</p>}
+      {results && results.length === 0 && !busy && <p style={{ color: '#5a6378' }}>{L('沒有符合的學校，放寬條件試試。', 'No matches — try loosening the filters.')}</p>}
+      {results && results.length > 0 && <p style={{ color: '#5a6378', fontSize: '.82rem' }}>{L('約 ', '~')}{total.toLocaleString()}{L(' 所符合，依焦點排序顯示前 ', ' matches · showing top ')}{results.length}{L(' 所。', ' by focus.')}</p>}
 
       <details style={{ marginTop: 16, background: '#fff', border: '1.5px solid #d9d9d2', borderRadius: 12, padding: '0 14px' }}>
-        <summary style={{ fontWeight: 800, padding: '12px 0', cursor: 'pointer' }}>早申請與送分 101（點開）</summary>
+        <summary style={{ fontWeight: 800, padding: '12px 0', cursor: 'pointer' }}>{L('早申請與送分 101（點開）', 'Early apps & testing 101 (tap)')}</summary>
         <div style={{ fontSize: '.86rem', color: '#2a3a5c', paddingBottom: 12 }}>
-          <p><b>ED（Early Decision）</b>：綁定，錄取就必須去、只能投一間。約 11/1。</p>
-          <p><b>EA（Early Action）</b>：不綁定，可投多間。約 11/1。</p>
-          <p><b>REA/SCEA</b>：不綁定但不能同時申請其他私立早申請（Harvard／Yale／Princeton／Stanford 等）。</p>
-          <p><b>RD（Regular Decision）</b>：常規申請，約 1 月。</p>
-          <p style={{ marginTop: 6 }}>送分政策 2026–27 有多所頂校恢復必繳、UC／CSU 全 test-blind——<b>一律以各校官網為準</b>。TIPS 只幫你研究與整理清單，不代送、不保證錄取。</p>
+          <p><b>ED（Early Decision）</b>{L('：綁定，錄取就必須去、只能投一間。約 11/1。', ': binding — if admitted you must enroll, and you may apply ED to only one school. ~Nov 1.')}</p>
+          <p><b>EA（Early Action）</b>{L('：不綁定，可投多間。約 11/1。', ': non-binding — apply to as many as you like. ~Nov 1.')}</p>
+          <p><b>REA/SCEA</b>{L('：不綁定但不能同時申請其他私立早申請（Harvard／Yale／Princeton／Stanford 等）。', ': non-binding, but no other private early apps (Harvard/Yale/Princeton/Stanford, etc.).')}</p>
+          <p><b>RD（Regular Decision）</b>{L('：常規申請，約 1 月。', ': regular deadline, ~January.')}</p>
+          <p style={{ marginTop: 6 }}>{L('送分政策 2026–27 有多所頂校恢復必繳、UC／CSU 全 test-blind——一律以各校官網為準。TIPS 只幫你研究與整理清單，不代送、不保證錄取。', 'For 2026–27, many top schools require testing again and UC/CSU are test-blind — always confirm on each college’s site. TIPS helps you research and organize a list; we never submit applications for you and never guarantee admission.')}</p>
         </div>
       </details>
 
       <p style={{ fontSize: '.76rem', color: '#5a6378', marginTop: 12 }}>
-        資料：U.S. Department of Education, College Scorecard（CC-BY）。數據可能落後 1–2 年，請以學校官網為準。
+        {L('資料：U.S. Department of Education, College Scorecard（CC-BY）。數據可能落後 1–2 年，請以學校官網為準。', 'Data: U.S. Department of Education, College Scorecard (CC-BY). Figures may lag 1–2 years — verify on each college’s official site.')}
       </p>
     </div>
   );
@@ -275,9 +282,12 @@ export default function App() {
   if (!isTeacher && (!student.focus_anchor || editAnchor)) {
     return <Onboarding student={student} onDone={(u) => { setStudent(u); setEditAnchor(false); }} />;
   }
+  const enUS = student.school_type === 'us';
   const tabs = isTeacher
     ? [['students', '學生總表'], ['deadlines', '時程管理'], ['reminders', '提醒']]
-    : [['dashboard', '總覽'], ['artifacts', '素材倉庫'], ['college', '選校'], ['timeline', '時程']];
+    : (enUS
+      ? [['dashboard', 'Overview'], ['artifacts', 'Vault'], ['college', 'College'], ['timeline', 'Timeline']]
+      : [['dashboard', '總覽'], ['artifacts', '素材倉庫'], ['college', '選校'], ['timeline', '時程']]);
 
   return (
     <div className="shell">
@@ -285,8 +295,8 @@ export default function App() {
         <div className="brand">
           TIPS 學習歷程<small>{student.name}{isTeacher ? '（老師）' : ''}</small>
         </div>
-        {!isTeacher && <button onClick={() => setEditAnchor(true)}>科別／組別</button>}
-        <button onClick={() => { setToken(null); setStudent(null); }}>登出</button>
+        {!isTeacher && <button onClick={() => setEditAnchor(true)}>{enUS ? 'Focus' : '科別／組別'}</button>}
+        <button onClick={() => { setToken(null); setStudent(null); }}>{enUS ? 'Log out' : '登出'}</button>
       </header>
 
       {!isTeacher && tab === 'dashboard' && <Dashboard student={student} onQuickAdd={goQuickAdd} />}
