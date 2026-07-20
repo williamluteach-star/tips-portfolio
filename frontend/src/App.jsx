@@ -639,8 +639,22 @@ function Login({ onDone }) {
       <div className="login-card">
         {mode === 'login' && (
           <>
-            <h1>把三年的努力，<br /><span className="hl">一格一格存下來</span></h1>
-            <p className="sub">TIPS 學習歷程平台 — 素材隨手存，備審不慌張</p>
+            {APP_LANG0 === 'en' ? (
+              <>
+                <h1>Four years of real work,<br /><span className="hl">captured as you live it</span></h1>
+                <p className="sub">TIPS College Application Companion — save the story as it happens, not the summer before deadlines.</p>
+              </>
+            ) : APP_LANG0 === 'zh-CN' ? (
+              <>
+                <h1>四年的真实作品，<br /><span className="hl">边走边一格一格存下来</span></h1>
+                <p className="sub">TIPS 升学申请陪伴 — 素材随手存，申请不慌张。</p>
+              </>
+            ) : (
+              <>
+                <h1>把三年的努力，<br /><span className="hl">一格一格存下來</span></h1>
+                <p className="sub">TIPS 學習歷程平台 — 素材隨手存，備審不慌張</p>
+              </>
+            )}
             <label htmlFor="sid">學號 / Student ID</label>
             <input id="sid" value={studentId} onChange={(e) => setStudentId(e.target.value)} placeholder="S000123 / US000123" autoComplete="username" />
             <label htmlFor="code">登入代碼 / Login code</label>
