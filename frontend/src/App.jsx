@@ -478,7 +478,7 @@ function USOverview({ student, lang }) {
 }
 
 /* ============ 台灣落點分析（個人申請第一階段過篩） ============ */
-const TW_CLUSTERS = ['資訊學群', '工程學群', '數理化學群', '醫藥衛生學群', '生命科學學群', '生物資源學群', '地球環境學群', '建築設計學群', '藝術學群', '社會與心理學群', '大眾傳播學群', '外語學群', '文史哲學群', '教育學群', '法政學群', '管理學群', '財經學群', '遊憩運動學群'];
+const TW_CLUSTERS = ['資訊學群', '工程學群', '數理化學群', '醫藥衛生學群', '生命科學學群', '生物資源學群', '地球與環境學群', '建築與設計學群', '藝術學群', '社會與心理學群', '大眾傳播學群', '外語學群', '文史哲學群', '教育學群', '法政學群', '管理學群', '財經學群', '遊憩與運動學群'];
 const TW_SUBS = ['國', '英', '數A', '數B', '社', '自'];
 const PL_FLD = { width: '100%', padding: '9px 11px', border: '1.5px solid #d9d9d2', borderRadius: 8, fontSize: '.95rem', fontFamily: 'inherit', background: '#f7f7f4', color: '#16233b' };
 const PL_BTN = { background: '#16233b', color: '#f7f7f4', border: 'none', borderRadius: 10, padding: '11px 22px', fontWeight: 800, cursor: 'pointer' };
@@ -499,15 +499,15 @@ function Placement({ student }) {
     setBusy(false);
   }
   const cols = res ? [
-    { key: 'dream', label: '夢幻', bg: '#f6d9df', color: '#8e1f34', list: res.dream || [] },
-    { key: 'prep', label: '預備', bg: '#fce9c8', color: '#b06f00', list: res.prep || [] },
-    { key: 'safe', label: '穩上', bg: '#d7efe0', color: '#15703c', list: res.safe || [] },
+    { key: 'dream', label: '夢幻', sub: '一階偏難', bg: '#f6d9df', color: '#8e1f34', list: res.dream || [] },
+    { key: 'prep', label: '適中', sub: '一階邊緣', bg: '#fce9c8', color: '#b06f00', list: res.prep || [] },
+    { key: 'safe', label: '安全', sub: '穩過一階', bg: '#d7efe0', color: '#15703c', list: res.safe || [] },
   ] : [];
 
   return (
     <div style={{ padding: '10px 4px 90px' }}>
       <h2 style={{ margin: '4px 0' }}>落點分析</h2>
-      <p style={{ color: '#5a6378', fontSize: '.9rem' }}>個人申請「第一階段過篩」推估。輸入學測級分（可先用模擬級分規劃），系統對上歷年通過標準，分成夢幻／穩上／預備。</p>
+      <p style={{ color: '#5a6378', fontSize: '.9rem' }}>個人申請「<b>第一階段</b>」過篩難易推估：先看<b>檢定門檻</b>（各科最低標級），再用各校系去年「各篩選順序的通過最低級分」逐段比對，分成夢幻／適中／安全。<b>過一階 ≠ 錄取</b>；第二階段（書審／面試）另需準備。</p>
 
       <div style={{ display: 'inline-flex', border: '2px solid #16233b', borderRadius: 999, overflow: 'hidden', margin: '6px 0 12px' }}>
         <button onClick={() => setMode('sim')} style={{ border: 'none', padding: '7px 16px', fontWeight: 800, cursor: 'pointer', background: mode === 'sim' ? '#16233b' : '#fff', color: mode === 'sim' ? '#fff' : '#16233b' }}>模擬級分</button>
@@ -542,20 +542,47 @@ function Placement({ student }) {
         </div>
       )}
 
+      {res && res.counts && (res.counts.dream + res.counts.prep + res.counts.safe) === 0 && (
+        <div style={{ background: '#fff7e0', border: '1.5px solid #b06f00', borderRadius: 10, padding: '10px 14px', marginTop: 12, fontSize: '.85rem', color: '#7a4a00' }}>
+          沒有可比對的校系。可能是所選學群目前尚無通過級分資料，或你填的科目與校系採計不符。試著多填幾科、或放寬學群。
+        </div>
+      )}
+
       {res && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 12, marginTop: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12, marginTop: 14 }}>
           {cols.map((col) => (
             <div key={col.key}>
-              <div style={{ fontWeight: 800, background: col.bg, color: col.color, borderRadius: 8, padding: '6px 12px', textAlign: 'center' }}>{col.label}（{col.list.length}）</div>
+              <div style={{ fontWeight: 800, background: col.bg, color: col.color, borderRadius: 8, padding: '6px 12px', textAlign: 'center' }}>{col.label}（{col.list.length}）<span style={{ fontWeight: 600, fontSize: '.72rem', opacity: .8 }}>· {col.sub}</span></div>
               {col.list.length === 0 && <p style={{ color: '#5a6378', fontSize: '.85rem', textAlign: 'center', marginTop: 8 }}>—</p>}
-              {col.list.map((m, i) => (
+              {col.list.slice(0, 40).map((m, i) => (
                 <div key={i} style={{ background: '#fff', border: '1.5px solid #d9d9d2', borderRadius: 10, padding: '10px 12px', marginTop: 8 }}>
                   <div style={{ fontWeight: 800, fontSize: '.92rem' }}>{m.school} {m.dept}</div>
-                  <div style={{ color: '#5a6378', fontSize: '.8rem' }}>{m.cluster}</div>
-                  <div style={{ fontSize: '.84rem', marginTop: 4 }}>採計 {m.count}｜我 <b>{m.my_sum}</b> vs 歷年通過 <b>{m.pass_prev}</b></div>
-                  {m.check && <div style={{ color: '#5a6378', fontSize: '.78rem' }}>檢定門檻：{m.check}</div>}
+                  <div style={{ color: '#5a6378', fontSize: '.8rem' }}>{m.cluster}{m.subjects ? '｜採計 ' + m.subjects : ''}</div>
+                  {Array.isArray(m.checkFail) && m.checkFail.length > 0 ? (
+                    <div style={{ fontSize: '.82rem', marginTop: 4, color: '#8e1f34', fontWeight: 700 }}>
+                      ✕ 檢定未過：{m.checkFail.join('、')}
+                      <div style={{ fontWeight: 400, fontSize: '.74rem', color: '#5a6378', marginTop: 2 }}>檢定沒過就無法進入倍率篩選，需先拉高該科。</div>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '.84rem', marginTop: 4 }}>
+                      最吃緊關卡：<b>{m.binding || '—'}</b>
+                      <span style={{ color: m.minMargin >= 0 ? '#15703c' : '#8e1f34', fontWeight: 800, marginLeft: 6 }}>
+                        {m.minMargin >= 0 ? '+' : ''}{m.minMargin} 級分
+                      </span>
+                    </div>
+                  )}
+                  {(!m.checkFail || !m.checkFail.length) && Array.isArray(m.detail) && m.detail.length > 0 && (
+                    <div style={{ fontSize: '.74rem', color: '#5a6378', marginTop: 4, lineHeight: 1.5 }}>
+                      {m.detail.map((d, j) => (
+                        <span key={j}>順序{j + 1}｜{d.subs} 我{d.my}／去年{d.need}（{d.margin >= 0 ? '+' : ''}{d.margin}）{j < m.detail.length - 1 ? '　' : ''}</span>
+                      ))}
+                    </div>
+                  )}
+                  {m.check && <div style={{ fontSize: '.72rem', color: '#8a94a6', marginTop: 3 }}>檢定門檻：{m.check}</div>}
+                  {m.partial && <div style={{ color: '#b06f00', fontSize: '.72rem', marginTop: 3 }}>＊部分關卡因缺對應科成績未計入</div>}
                 </div>
               ))}
+              {col.list.length > 40 && <p style={{ color: '#5a6378', fontSize: '.78rem', textAlign: 'center', marginTop: 6 }}>還有 {col.list.length - 40} 個…（縮小學群範圍可看更精準）</p>}
             </div>
           ))}
         </div>
@@ -563,7 +590,8 @@ function Placement({ student }) {
 
       {res && (
         <p style={{ fontSize: '.76rem', color: '#5a6378', marginTop: 14 }}>
-          {res.note}<br />{res.source}
+          {res.note}<br />{res.source}<br />
+          註：音樂／美術／體育等<b>術科校系</b>以術科成績篩選，不適用學測級分推估，未列入本結果。部分校系去年未觸發篩選（人人過一階），亦不會出現在此。
         </p>
       )}
     </div>
