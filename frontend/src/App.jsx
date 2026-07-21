@@ -878,45 +878,60 @@ function Onboarding({ student, onDone }) {
 /* ============ 登入 ============ */
 
 function Login({ onDone }) {
-  // 台灣線雙入口：未選＝null（顯示選擇畫面）；'hs'＝高中；'vt'＝技高。
-  // 美國線不需要選；?track=vt 直接進技高。
   const [entry, setEntry] = useState(APP_MARKET === 'us' ? 'hs' : (APP_TRACK === 'vt' ? 'vt' : null));
-  const [mode, setMode] = useState('login'); // 'login' | 'signup' | 'created'
-  const [studentId, setStudentId] = useState('');
-  const [loginCode, setLoginCode] = useState('');
+  // 美國與台灣邏輯一致：一律先進「免費註冊」，登入為次要。
+  const [mode, setMode] = useState('signup'); // 'login' | 'signup' | 'created'
+  const [studentId, setStudentId] = useState('');   // 登入用帳號
+  const [loginCode, setLoginCode] = useState('');    // 登入用密碼
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [grade, setGrade] = useState('9');
+  const [account, setAccount] = useState('');        // 註冊自訂帳號
+  const [password, setPassword] = useState('');      // 註冊自訂密碼
+  const [phone, setPhone] = useState('');
+  const [schoolName, setSchoolName] = useState('');
+  const [city, setCity] = useState('');
+  const [grade, setGrade] = useState(APP_MARKET === 'us' ? '9' : '10');
+  const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [created, setCreated] = useState(null);
-  const lt = (zh, en) => (APP_MARKET === 'us' ? en : zh);
+  const isUS = APP_MARKET === 'us';
+  const lt = (zh, en) => (isUS ? en : zh);
+  const TW_CITIES = ['台北市', '新北市', '桃園市', '台中市', '台南市', '高雄市', '基隆市', '新竹市', '新竹縣', '苗栗縣', '彰化縣', '南投縣', '雲林縣', '嘉義市', '嘉義縣', '屏東縣', '宜蘭縣', '花蓮縣', '台東縣', '澎湖縣', '金門縣', '連江縣'];
 
-  async function submit() {
+  async function submit(e) {
+    if (e && e.preventDefault) e.preventDefault();
     setBusy(true); setErr('');
     try {
       const data = await api('login', { studentId, loginCode });
       setToken(data.token);
       onDone(data.student);
-    } catch (e) { setErr(e.message); } finally { setBusy(false); }
+    } catch (er) { setErr(er.message); } finally { setBusy(false); }
   }
 
-  async function signup() {
-    if (!name.trim() || email.indexOf('@') < 1) { setErr('Please enter the student\'s name and a valid email.'); return; }
+  async function signup(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!name.trim()) { setErr(lt('請填學生姓名。', 'Please enter the student’s name.')); return; }
+    if (email.indexOf('@') < 1) { setErr(lt('請填正確的 Email。', 'Please enter a valid email.')); return; }
+    if (!/^[A-Za-z0-9._]{4,20}$/.test(account.trim())) { setErr(lt('帳號請用 4–20 個英文字母、數字、點或底線。', 'Account: 4–20 letters, digits, dot or underscore.')); return; }
+    if (password.length < 6) { setErr(lt('密碼至少 6 碼。', 'Password must be at least 6 characters.')); return; }
+    if (!isUS && !phone.trim()) { setErr('請填聯絡電話，方便我們與你聯繫。'); return; }
+    if (!isUS && !consent) { setErr('請先閱讀並勾選個資使用同意。'); return; }
     setBusy(true); setErr('');
     try {
-      const d = await api('signup', { name: name.trim(), email: email.trim(), grade, track: entry });
+      const d = await api('signup', {
+        name: name.trim(), email: email.trim(), account: account.trim(), password: password,
+        phone: phone.trim(), school_name: schoolName.trim(), city: city, grade: grade,
+        consent: consent, track: (isUS ? 'us' : entry),
+      });
       setCreated(d);
       setMode('created');
-    } catch (e) { setErr(e.message); } finally { setBusy(false); }
+    } catch (er) { setErr(er.message); } finally { setBusy(false); }
   }
 
-  function enterApp() {
-    setToken(created.token);
-    onDone(created.student);
-  }
+  function enterApp() { setToken(created.token); onDone(created.student); }
 
-  // ── 台灣線雙入口選擇畫面 ──
+  // ── 台灣線雙入口選擇畫面（先選高中/技高，再進註冊）──
   if (entry === null) {
     const ecard = { flex: 1, borderRadius: 16, padding: '22px 16px', textAlign: 'center', cursor: 'pointer', border: '2px solid transparent' };
     return (
@@ -925,87 +940,113 @@ function Login({ onDone }) {
           <h1>你要走哪一條？</h1>
           <p className="sub">選錯也沒關係，之後可以切換。共用的素材倉庫與 AI 教練兩邊都有。</p>
           <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-            <div role="button" tabIndex={0} onClick={() => setEntry('hs')}
+            <div role="button" tabIndex={0} onClick={() => { setEntry('hs'); setMode('signup'); }}
               style={Object.assign({}, ecard, { background: '#16233b', color: '#fff' })}>
               <div style={{ fontSize: 30 }}>🎓</div>
               <div style={{ fontWeight: 900, fontSize: 17, marginTop: 6 }}>高中</div>
               <div style={{ fontSize: 12.5, opacity: .85, marginTop: 2 }}>學測・個人申請<br />三年</div>
             </div>
-            <div role="button" tabIndex={0} onClick={() => setEntry('vt')}
+            <div role="button" tabIndex={0} onClick={() => { setEntry('vt'); setMode('signup'); }}
               style={Object.assign({}, ecard, { background: '#fff', borderColor: '#16233b', color: '#16233b' })}>
               <div style={{ fontSize: 30 }}>🛠</div>
               <div style={{ fontWeight: 900, fontSize: 17, marginTop: 6 }}>技高</div>
               <div style={{ fontSize: 12.5, opacity: .85, marginTop: 2 }}>統測・四技二專<br />甄選入學</div>
             </div>
           </div>
-          <button className="btn-sm" style={{ marginTop: 18 }} onClick={() => { window.location.search = '?m=us'; }}>美國升學？前往英文版 →</button>
+          <button className="btn-sm" style={{ marginTop: 18 }} onClick={() => { setEntry('hs'); setMode('login'); }}>已有帳號，請登入 →</button>
+          <button className="btn-sm" style={{ marginTop: 8 }} onClick={() => { window.location.search = '?m=us'; }}>美國升學？前往英文版 →</button>
         </div>
       </div>
     );
   }
 
+  const PDPA = '依《個人資料保護法》，TIPS 蒐集你的姓名、Email、聯絡電話、就讀學校與縣市，僅用於提供學習歷程與升學陪伴服務、並在必要時與你聯絡；資料妥善保存、不對外提供、不外洩。你可隨時要求查詢、更正或刪除。';
+
   return (
     <div className="login-wrap">
       <div className="login-card">
-        {APP_MARKET !== 'us' && (
-          <button className="btn-sm" style={{ marginBottom: 10 }} onClick={() => setEntry(null)}>← 返回選擇入口</button>
+        {!isUS && (
+          <button className="btn-sm" style={{ marginBottom: 10 }} onClick={() => { setErr(''); setEntry(null); }}>← 返回選擇入口</button>
         )}
-        {entry === 'vt' && (
+        {entry === 'vt' && !isUS && (
           <div style={{ display: 'inline-block', background: '#eef2fb', color: '#16233b', border: '1.5px solid #c7d0e0', borderRadius: 999, padding: '3px 12px', fontSize: 12.5, fontWeight: 700, marginBottom: 8 }}>🛠 技高・統測／四技二專甄選</div>
         )}
+        {entry === 'hs' && !isUS && (
+          <div style={{ display: 'inline-block', background: '#eef2fb', color: '#16233b', border: '1.5px solid #c7d0e0', borderRadius: 999, padding: '3px 12px', fontSize: 12.5, fontWeight: 700, marginBottom: 8 }}>🎓 高中・學測／個人申請</div>
+        )}
+
         {mode === 'login' && (
-          <>
-            {APP_MARKET === 'us' ? (
-              <>
-                <h1>Four years of real work,<br /><span className="hl">captured as you live it</span></h1>
-                <p className="sub">TIPS College Application Companion — save the story as it happens, not the summer before deadlines.</p>
-              </>
-            ) : (
-              <>
-                <h1>把三年的努力，<br /><span className="hl">一格一格存下來</span></h1>
-                <p className="sub">TIPS 學習歷程平台 — 素材隨手存，備審不慌張</p>
-              </>
-            )}
-            <label htmlFor="sid">{lt('學號', 'Student ID', '学号')}</label>
-            <input id="sid" value={studentId} onChange={(e) => setStudentId(e.target.value)} placeholder={lt('例：S000123', 'e.g. US000123', '例：S000123')} autoComplete="username" />
-            <label htmlFor="code">{lt('登入代碼', 'Login code', '登入代码')}</label>
-            <input id="code" value={loginCode} onChange={(e) => setLoginCode(e.target.value)} placeholder={lt('8 碼代碼', '8-character code', '8 码代码')} autoComplete="current-password" />
-            <button className="btn" onClick={submit} disabled={busy}>{busy ? lt('登入中…', 'Signing in…', '登入中…') : lt('登入', 'Log in', '登入')}</button>
+          <form onSubmit={submit} autoComplete="on">
+            <h1>{lt('學生登入', 'Log in')}</h1>
+            <p className="sub">{lt('用你註冊時設定的帳號與密碼進入。', 'Sign in with the account and password you created.')}</p>
+            <label htmlFor="sid">{lt('帳號', 'Account')}</label>
+            <input id="sid" name="username" value={studentId} onChange={(e) => setStudentId(e.target.value)} placeholder={lt('你的帳號', 'your account')} autoComplete="username" />
+            <label htmlFor="code">{lt('密碼', 'Password')}</label>
+            <input id="code" name="password" type="password" value={loginCode} onChange={(e) => setLoginCode(e.target.value)} placeholder={lt('你的密碼', 'your password')} autoComplete="current-password" />
+            <div style={{ fontSize: '.72rem', color: '#5a6378', marginTop: 4 }}>{lt('登入後可讓瀏覽器記住帳號密碼，下次自動帶入。', 'Let your browser save these to sign in faster next time.')}</div>
+            <button className="btn" type="submit" disabled={busy} style={{ marginTop: 12 }}>{busy ? lt('登入中…', 'Signing in…') : lt('登入', 'Log in')}</button>
             {err && <p className="err">{err}</p>}
-            {APP_MARKET === 'us' && <button className="btn-sm" style={{ marginTop: 14 }} onClick={() => { setErr(''); setMode('signup'); }}>New family? Sign up free →</button>}
-          </>
+            <button type="button" className="btn-sm" style={{ marginTop: 14 }} onClick={() => { setErr(''); setMode('signup'); }}>{lt('還沒有帳號？免費註冊 →', 'New here? Sign up free →')}</button>
+          </form>
         )}
 
         {mode === 'signup' && (
-          <>
-            <h1>Start free 👋</h1>
-            <p className="sub">Create your student account and capture the real work over four years. No credit card.</p>
-            <label htmlFor="su-name">Student's name</label>
-            <input id="su-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Maya Chen" />
-            <label htmlFor="su-email">Parent or student email</label>
-            <input id="su-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" autoComplete="email" />
-            <label htmlFor="su-grade">Current grade</label>
+          <form onSubmit={signup} autoComplete="on">
+            <h1>{lt('學生免費註冊', 'Sign up free 👋')}</h1>
+            <p className="sub">{lt('建立帳號，開始把作品一路存下來。免費、免信用卡。', 'Create your account and capture the real work over four years. No credit card.')}</p>
+            <label htmlFor="su-name">{lt('學生姓名', 'Student’s name')}</label>
+            <input id="su-name" name="name" value={name} onChange={(e) => setName(e.target.value)} placeholder={lt('例：陳小明', 'e.g. Maya Chen')} autoComplete="name" />
+            <label htmlFor="su-acct">{lt('設定帳號', 'Choose an account')}</label>
+            <input id="su-acct" name="new-username" value={account} onChange={(e) => setAccount(e.target.value)} placeholder={lt('4–20 碼英數（登入用）', '4–20 letters/digits (for login)')} autoComplete="username" />
+            <label htmlFor="su-pw">{lt('設定密碼', 'Choose a password')}</label>
+            <input id="su-pw" name="new-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={lt('至少 6 碼', 'at least 6 characters')} autoComplete="new-password" />
+            <label htmlFor="su-email">{lt('Email（家長或學生）', 'Parent or student email')}</label>
+            <input id="su-email" name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" autoComplete="email" />
+            {!isUS && (
+              <>
+                <label htmlFor="su-phone">聯絡電話</label>
+                <input id="su-phone" name="tel" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="09xx-xxx-xxx" autoComplete="tel" />
+                <label htmlFor="su-school">就讀學校（選填）</label>
+                <input id="su-school" value={schoolName} onChange={(e) => setSchoolName(e.target.value)} placeholder={entry === 'vt' ? '例：台中高工' : '例：台中一中'} autoComplete="organization" />
+                <label htmlFor="su-city">縣市（選填）</label>
+                <select id="su-city" value={city} onChange={(e) => setCity(e.target.value)}>
+                  <option value="">請選擇…</option>
+                  {TW_CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </>
+            )}
+            <label htmlFor="su-grade">{lt('目前年級', 'Current grade')}</label>
             <select id="su-grade" value={grade} onChange={(e) => setGrade(e.target.value)}>
-              <option value="9">Grade 9</option>
-              <option value="10">Grade 10</option>
-              <option value="11">Grade 11</option>
-              <option value="12">Grade 12</option>
+              {isUS
+                ? ['9', '10', '11', '12'].map((g) => <option key={g} value={g}>{'Grade ' + g}</option>)
+                : ['10', '11', '12'].map((g) => <option key={g} value={g}>{'高' + (g === '10' ? '一' : g === '11' ? '二' : '三') + '（' + g + '）'}</option>)}
             </select>
-            <button className="btn" style={{ marginTop: 14 }} onClick={signup} disabled={busy}>{busy ? 'Creating…' : 'Create free account'}</button>
+            {!isUS && (
+              <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 12, fontSize: '.78rem', color: '#5a6378', lineHeight: 1.55 }}>
+                <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} style={{ marginTop: 3, width: 'auto' }} />
+                <span>我已閱讀並同意個資使用說明。{PDPA}</span>
+              </label>
+            )}
+            <button className="btn" type="submit" style={{ marginTop: 14 }} disabled={busy}>{busy ? lt('建立中…', 'Creating…') : lt('免費建立帳號', 'Create free account')}</button>
             {err && <p className="err">{err}</p>}
-            <button className="btn-sm" style={{ marginTop: 14 }} onClick={() => { setErr(''); setMode('login'); }}>← Already have an account? Log in</button>
-          </>
+            <button type="button" className="btn-sm" style={{ marginTop: 14 }} onClick={() => { setErr(''); setMode('login'); }}>{lt('已有帳號，請登入 →', '← Already have an account? Log in')}</button>
+          </form>
         )}
 
         {mode === 'created' && created && (
           <>
-            <h1>You're in 🎉</h1>
-            <p className="sub">Save your login — you'll use it next time to sign in:</p>
-            <div style={{ background: '#fff', border: '1.5px solid var(--ink)', borderRadius: 10, padding: '12px 14px', margin: '6px 0 14px' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.95rem' }}>Student ID: <b>{created.studentId}</b></div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.95rem', marginTop: 4 }}>Login code: <b>{created.loginCode}</b></div>
+            <h1>{lt('完成 🎉', 'You’re in 🎉')}</h1>
+            <p className="sub">{lt('帳號建立成功。下次用你剛剛設定的帳號與密碼登入：', 'Account created. Next time, sign in with the account and password you just set:')}</p>
+            <div style={{ background: '#fff', border: '1.5px solid var(--ink)', borderRadius: 10, padding: '12px 14px', margin: '6px 0 10px' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.95rem' }}>{lt('帳號', 'Account')}: <b>{created.studentId}</b></div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.95rem', marginTop: 4 }}>{lt('密碼', 'Password')}: <b>{lt('你剛剛設定的密碼', 'the password you set')}</b></div>
             </div>
-            <button className="btn" onClick={enterApp}>Continue →</button>
+            <div style={{ fontSize: '.76rem', color: '#5a6378', lineHeight: 1.6, background: '#f7f7f4', border: '1px solid #e2e2dc', borderRadius: 8, padding: '10px 12px' }}>
+              {lt('帳號與密碼都是你自己設定的，請記牢；忘記時可請老師或客服協助查詢。登入時可讓瀏覽器記住，下次自動帶入。',
+                'You chose your own account and password — keep them safe. If forgotten, a teacher or support can help you retrieve them. Let your browser remember them for next time.')}
+            </div>
+            {!isUS && <div style={{ fontSize: '.72rem', color: '#8a94a6', marginTop: 8 }}>你的聯絡資訊已依個資法妥善保存、不外洩。</div>}
+            <button className="btn" onClick={enterApp} style={{ marginTop: 14 }}>{lt('進入平台 →', 'Continue →')}</button>
           </>
         )}
       </div>
