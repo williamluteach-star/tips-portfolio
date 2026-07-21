@@ -12,6 +12,17 @@ function resolveMarket() {
 }
 const APP_MARKET = resolveMarket();
 
+/* 台灣線再分兩條：高中（學測/個申，裸網址）與 技高（統測/四技二專，?track=vt）。
+   一樣只看網址旗標、不碰 localStorage。美國線不受影響。 */
+function resolveTrack() {
+  try {
+    var q = new URLSearchParams(window.location.search);
+    if (q.get('track') === 'vt') return 'vt';
+  } catch (e) {}
+  return 'hs';
+}
+const APP_TRACK = resolveTrack();
+
 /* ============ 常數 ============ */
 
 const SUBCATS = {
@@ -762,6 +773,9 @@ function Onboarding({ student, onDone }) {
 /* ============ 登入 ============ */
 
 function Login({ onDone }) {
+  // 台灣線雙入口：未選＝null（顯示選擇畫面）；'hs'＝高中；'vt'＝技高。
+  // 美國線不需要選；?track=vt 直接進技高。
+  const [entry, setEntry] = useState(APP_MARKET === 'us' ? 'hs' : (APP_TRACK === 'vt' ? 'vt' : null));
   const [mode, setMode] = useState('login'); // 'login' | 'signup' | 'created'
   const [studentId, setStudentId] = useState('');
   const [loginCode, setLoginCode] = useState('');
@@ -797,9 +811,57 @@ function Login({ onDone }) {
     onDone(created.student);
   }
 
+  // ── 台灣線雙入口選擇畫面 ──
+  if (entry === null) {
+    const ecard = { flex: 1, borderRadius: 16, padding: '22px 16px', textAlign: 'center', cursor: 'pointer', border: '2px solid transparent' };
+    return (
+      <div className="login-wrap">
+        <div className="login-card">
+          <h1>你要走哪一條？</h1>
+          <p className="sub">選錯也沒關係，之後可以切換。共用的素材倉庫與 AI 教練兩邊都有。</p>
+          <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+            <div role="button" tabIndex={0} onClick={() => setEntry('hs')}
+              style={Object.assign({}, ecard, { background: '#16233b', color: '#fff' })}>
+              <div style={{ fontSize: 30 }}>🎓</div>
+              <div style={{ fontWeight: 900, fontSize: 17, marginTop: 6 }}>高中</div>
+              <div style={{ fontSize: 12.5, opacity: .85, marginTop: 2 }}>學測・個人申請<br />三年</div>
+            </div>
+            <div role="button" tabIndex={0} onClick={() => setEntry('vt')}
+              style={Object.assign({}, ecard, { background: '#fff', borderColor: '#16233b', color: '#16233b' })}>
+              <div style={{ fontSize: 30 }}>🛠</div>
+              <div style={{ fontWeight: 900, fontSize: 17, marginTop: 6 }}>技高</div>
+              <div style={{ fontSize: 12.5, opacity: .85, marginTop: 2 }}>統測・四技二專<br />甄選入學</div>
+            </div>
+          </div>
+          <button className="btn-sm" style={{ marginTop: 18 }} onClick={() => { window.location.search = '?m=us'; }}>美國升學？前往英文版 →</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── 技高入口（落點/骨架建置中；素材與教練已可用，先預告）──
+  if (entry === 'vt') {
+    return (
+      <div className="login-wrap">
+        <div className="login-card">
+          <button className="btn-sm" onClick={() => setEntry(null)}>← 返回選擇入口</button>
+          <div style={{ display: 'inline-block', background: '#fff7e0', color: '#7a4a00', border: '1.5px solid #f0d98a', borderRadius: 999, padding: '3px 12px', fontSize: 12.5, fontWeight: 700, margin: '10px 0 6px' }}>技高線・搶先預告</div>
+          <h1 style={{ marginTop: 4 }}>技高落點<br /><span className="hl">建置中</span></h1>
+          <p className="sub">統測／四技二專甄選的落點分析正在建置（各群類篩選標準）。學習歷程素材倉庫與 AI 教練與高中共用，上線後即可使用。想第一時間收到通知，留個聯絡方式：</p>
+          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email（選填，通知上線）" autoComplete="email" />
+          <button className="btn" onClick={() => { if (email.indexOf('@') > 0) { setMode('vt_ok'); } }}>預約通知</button>
+          {mode === 'vt_ok' && <p style={{ color: '#15703c', fontSize: '.9rem', marginTop: 8 }}>已記下，謝謝！技高上線會通知你。</p>}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="login-wrap">
       <div className="login-card">
+        {entry === 'hs' && APP_MARKET !== 'us' && (
+          <button className="btn-sm" style={{ marginBottom: 10 }} onClick={() => setEntry(null)}>← 返回選擇入口</button>
+        )}
         {mode === 'login' && (
           <>
             {APP_MARKET === 'us' ? (
