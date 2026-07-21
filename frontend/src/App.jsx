@@ -192,7 +192,7 @@ function CollegeMatch({ student, lang }) {
 
   return (
     <div className="pane collegematch" style={{ padding: '12px 4px 90px' }}>
-      <h2 style={{ margin: '4px 0' }}>選校 · College Match</h2>
+      <h2 style={{ margin: '4px 0' }}>{L('選校 · College Match', 'College Match')}</h2>
       <p style={{ color: '#5a6378', fontSize: '.9rem', margin: '0 0 12px' }}>
         {L('選你的焦點方向，把「這個領域強」的學校排前面——把聚焦延伸到聚焦選校。', 'Pick your focus and we surface schools strong in that area — turning your focus into a focused college list.')}
       </p>
@@ -736,14 +736,14 @@ export default function App() {
   const tabs = isTeacher
     ? [['students', '學生總表'], ['deadlines', '時程管理'], ['reminders', '提醒']]
     : (enUS
-      ? [['dashboard', T3('總覽', 'Overview', '总览')], ['artifacts', T3('素材倉庫', 'Vault', '素材仓库')], ['college', T3('選校', 'College', '选校')], ['timeline', T3('時程', 'Timeline', '时程')]]
+      ? [['dashboard', T3('總覽', 'Overview', '总览')], ['college', T3('選校', 'College', '选校')], ['timeline', T3('時程', 'Timeline', '时程')]]
       : [['dashboard', '總覽'], ['artifacts', '素材倉庫'], ['placement', '落點'], ['timeline', '時程']]);
 
   return (
     <div className="shell">
       <header className="topbar">
         <div className="brand">
-          TIPS 學習歷程<small>{student.name}{isTeacher ? '（老師）' : ''}</small>
+          {enUS ? 'TIPS College Prep' : 'TIPS 學習歷程'}<small>{student.name}{isTeacher ? '（老師）' : ''}</small>
         </div>
         {!isTeacher && <button onClick={() => setEditAnchor(true)}>{enUS ? T3('方向', 'Focus', '方向') : '科別／組別'}</button>}
         <button onClick={() => { setToken(null); setStudent(null); }}>{enUS ? T3('登出', 'Log out', '登出') : '登出'}</button>
@@ -753,7 +753,7 @@ export default function App() {
       {!isTeacher && tab === 'artifacts' && <Artifacts student={student} autoOpen={quickAdd} onAutoOpenDone={() => setQuickAdd(null)} />}
       {!isTeacher && tab === 'college' && <CollegeMatch student={student} lang={appLang} />}
       {!isTeacher && tab === 'placement' && (isVoc ? <VtPlacement student={student} /> : <Placement student={student} />)}
-      {!isTeacher && tab === 'timeline' && <Timeline />}
+      {!isTeacher && tab === 'timeline' && <Timeline lang={appLang} />}
       {isTeacher && tab === 'students' && <TeacherStudents />}
       {isTeacher && tab === 'deadlines' && <TeacherDeadlines />}
       {isTeacher && tab === 'reminders' && <TeacherReminders />}
@@ -998,8 +998,10 @@ function Login({ onDone }) {
             <input id="su-name" name="name" value={name} onChange={(e) => setName(e.target.value)} placeholder={lt('例：陳小明', 'e.g. Maya Chen')} autoComplete="name" />
             <label htmlFor="su-acct">{lt('設定帳號', 'Choose an account')}</label>
             <input id="su-acct" name="new-username" value={account} onChange={(e) => setAccount(e.target.value)} placeholder={lt('4–20 碼英數（登入用）', '4–20 letters/digits (for login)')} autoComplete="username" />
+            <div style={{ fontSize: '.72rem', color: '#5a6378', marginTop: 4, lineHeight: 1.5 }}>{lt('帳號規則：4–20 碼，限英文字母、數字、點（.）或底線（_）；這就是你之後登入用的帳號，請自己設定並記牢。', 'Account rules: 4–20 characters — letters, digits, dot (.) or underscore (_). This is the account you’ll log in with, so choose it yourself and keep it.')}</div>
             <label htmlFor="su-pw">{lt('設定密碼', 'Choose a password')}</label>
             <input id="su-pw" name="new-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={lt('至少 6 碼', 'at least 6 characters')} autoComplete="new-password" />
+            <div style={{ fontSize: '.72rem', color: '#5a6378', marginTop: 4, lineHeight: 1.5 }}>{lt('密碼規則：至少 6 碼，由你自己設定；登入時可讓瀏覽器記住，下次自動帶入。忘記時可請老師或客服協助查詢。', 'Password rules: at least 6 characters, set by you. Your browser can remember it for next time; if you forget it, a teacher or support can help you retrieve it.')}</div>
             <label htmlFor="su-email">{lt('Email（家長或學生）', 'Parent or student email')}</label>
             <input id="su-email" name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" autoComplete="email" />
             {!isUS && (
@@ -1821,7 +1823,9 @@ function TeacherReminders() {
 
 /* ============ 時程 ============ */
 
-function Timeline() {
+function Timeline({ lang }) {
+  const EN = lang === 'en';
+  const L = (zh, en) => (EN ? en : zh);
   const [items, setItems] = useState(null);
   const [err, setErr] = useState('');
 
@@ -1830,26 +1834,27 @@ function Timeline() {
   }, []);
 
   if (err) return <p className="err">{err}</p>;
-  if (!items) return <p className="empty-hint">載入中…</p>;
+  if (!items) return <p className="empty-hint">{L('載入中…', 'Loading…')}</p>;
 
   return (
     <>
-      <h2>未來一年的重要時程</h2>
-      <DeadlineList items={items} emptyText="目前沒有排定的截止日。" />
-      <p className="hint">錯過「勾選至中央資料庫」的截止日，該學年資料將無法送交大學審查。</p>
+      <h2>{L('未來一年的重要時程', 'Upcoming deadlines')}</h2>
+      <DeadlineList items={items} lang={lang} emptyText={L('目前沒有排定的截止日。', 'No deadlines scheduled yet.')} />
+      <p className="hint">{L('錯過「勾選至中央資料庫」的截止日，該學年資料將無法送交大學審查。', 'Deadlines shown here are set by your counselor — always confirm each college’s own dates on its official site.')}</p>
     </>
   );
 }
 
-function DeadlineList({ items, emptyText }) {
+function DeadlineList({ items, emptyText, lang }) {
+  const EN = lang === 'en';
   if (!items.length) return <p className="empty-hint">{emptyText}</p>;
   return items.map((d) => {
     const days = daysUntil(d.due_at);
     return (
       <div key={d.deadline_id} className="deadline">
         <span className={`d-date ${days <= 7 ? 'soon' : ''}`}>
-          {new Date(d.due_at).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' })}
-          {days <= 7 ? `（剩${days}天）` : ''}
+          {new Date(d.due_at).toLocaleDateString(EN ? 'en-US' : 'zh-TW', { month: 'numeric', day: 'numeric' })}
+          {days <= 7 ? (EN ? ` (${days}d left)` : `（剩${days}天）`) : ''}
         </span>
         <div>
           <div className="d-title">{d.title}</div>
