@@ -609,6 +609,110 @@ function Placement({ student }) {
   );
 }
 
+/* ============ 技高落點分析（四技二專甄選・第一階段統測篩選） ============ */
+const VT_GROUPS = ['01-機械群', '02-動力機械群', '03-電機與電子群電機類', '04-電機與電子群資電類', '05-化工群', '06-土木與建築群', '07-設計群', '08-工程與管理類', '09-商業與管理群', '10-衛生與護理類', '11-食品群', '12-農業群', '13-家政群幼保類', '14-家政群生活應用類', '15-外語群英語類', '16-外語群日語類', '17-餐旅群', '18-海事群', '19-水產群', '20-藝術群影視類', '21-藝術群'];
+const VT_SUBS = ['國', '英', '數', '專一', '專二'];
+const VT_SUBLABEL = { '國': '國文', '英': '英文', '數': '數學', '專一': '專業一', '專二': '專業二' };
+
+function VtPlacement({ student }) {
+  const [scores, setScores] = useState({});
+  const [group, setGroup] = useState('');
+  const [mode, setMode] = useState('sim');
+  const [res, setRes] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const setScore = (k, v) => setScores(Object.assign({}, scores, { [k]: v }));
+  async function run() {
+    if (!group) { setErr('請先選擇你的統測群類'); return; }
+    setBusy(true); setErr('');
+    try { const d = await api('placementVt', { scores: scores, group: group, mode: mode }); setRes(d); }
+    catch (e) { setErr(e.message); }
+    setBusy(false);
+  }
+  const cols = res ? [
+    { key: 'dream', label: '夢幻', sub: '一階偏難', bg: '#f6d9df', color: '#8e1f34', list: res.dream || [] },
+    { key: 'prep', label: '適中', sub: '一階邊緣', bg: '#fce9c8', color: '#b06f00', list: res.prep || [] },
+    { key: 'safe', label: '安全', sub: '穩過一階', bg: '#d7efe0', color: '#15703c', list: res.safe || [] },
+  ] : [];
+
+  return (
+    <div style={{ padding: '10px 4px 90px' }}>
+      <h2 style={{ margin: '4px 0' }}>落點分析<span style={{ fontSize: '.8rem', color: '#5a6378', fontWeight: 600, marginLeft: 6 }}>技高・四技二專甄選</span></h2>
+      <p style={{ color: '#5a6378', fontSize: '.9rem' }}>四技二專甄選入學「<b>第一階段統測倍率篩選</b>」過篩難易推估。選你的統測群、輸入五科級分（可先用模擬級分規劃），系統以各校系去年「各篩選順序的通過標準」逐段比對。<b>過一階 ≠ 錄取</b>；第二階段指定項目甄試（備審／面試／實作）另需準備。</p>
+
+      <div style={{ display: 'inline-flex', border: '2px solid #16233b', borderRadius: 999, overflow: 'hidden', margin: '6px 0 12px' }}>
+        <button onClick={() => setMode('sim')} style={{ border: 'none', padding: '7px 16px', fontWeight: 800, cursor: 'pointer', background: mode === 'sim' ? '#16233b' : '#fff', color: mode === 'sim' ? '#fff' : '#16233b' }}>模擬級分</button>
+        <button onClick={() => setMode('real')} style={{ border: 'none', padding: '7px 16px', fontWeight: 800, cursor: 'pointer', background: mode === 'real' ? '#16233b' : '#fff', color: mode === 'real' ? '#fff' : '#16233b' }}>正式成績</button>
+      </div>
+
+      <div style={{ marginBottom: 10 }}>
+        <div style={{ fontSize: '.82rem', color: '#5a6378', fontWeight: 700, marginBottom: 4 }}>你的統測群類</div>
+        <select value={group} onChange={(e) => setGroup(e.target.value)} style={PL_FLD}>
+          <option value="">請選擇…</option>
+          {VT_GROUPS.map((g) => <option key={g} value={g}>{g}</option>)}
+        </select>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: 8 }}>
+        {VT_SUBS.map((s) => (
+          <div key={s}>
+            <div style={{ fontSize: '.8rem', color: '#5a6378', fontWeight: 700 }}>{VT_SUBLABEL[s]}</div>
+            <input style={PL_FLD} type="number" min="0" max="15" placeholder="0–15" value={scores[s] || ''} onChange={(e) => setScore(s, e.target.value)} />
+          </div>
+        ))}
+      </div>
+      <div style={{ fontSize: '.78rem', color: '#5a6378', marginTop: 4 }}>統測各科級分。專業一／專業二依你的群不同（例：資電類專一＝基本電學等）。</div>
+
+      <button style={{ ...PL_BTN, marginTop: 12 }} disabled={busy} onClick={run}>{busy ? '分析中…' : '分析落點'}</button>
+      {err && <p style={{ color: '#b3261e', fontSize: '.9rem' }}>{err}</p>}
+
+      {res && res.counts && (res.counts.dream + res.counts.prep + res.counts.safe) === 0 && (
+        <div style={{ background: '#fff7e0', border: '1.5px solid #b06f00', borderRadius: 10, padding: '10px 14px', marginTop: 12, fontSize: '.85rem', color: '#7a4a00' }}>
+          這個群目前沒有可比對的校系，或你填的科目與通過標準不符。確認群類選對、多填幾科再試。
+        </div>
+      )}
+
+      {res && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12, marginTop: 14 }}>
+          {cols.map((col) => (
+            <div key={col.key}>
+              <div style={{ fontWeight: 800, background: col.bg, color: col.color, borderRadius: 8, padding: '6px 12px', textAlign: 'center' }}>{col.label}（{col.list.length}）<span style={{ fontWeight: 600, fontSize: '.72rem', opacity: .8 }}>· {col.sub}</span></div>
+              {col.list.length === 0 && <p style={{ color: '#5a6378', fontSize: '.85rem', textAlign: 'center', marginTop: 8 }}>—</p>}
+              {col.list.slice(0, 40).map((m, i) => (
+                <div key={i} style={{ background: '#fff', border: '1.5px solid #d9d9d2', borderRadius: 10, padding: '10px 12px', marginTop: 8 }}>
+                  <div style={{ fontWeight: 800, fontSize: '.92rem' }}>{m.school} {m.dept}</div>
+                  <div style={{ color: '#5a6378', fontSize: '.8rem' }}>{m.group}{m.quota ? '｜名額 ' + m.quota : ''}</div>
+                  <div style={{ fontSize: '.84rem', marginTop: 4 }}>
+                    最吃緊關卡：<b>{m.binding || '—'}</b>
+                    <span style={{ color: m.minMargin >= 0 ? '#15703c' : '#8e1f34', fontWeight: 800, marginLeft: 6 }}>
+                      {m.minMargin >= 0 ? '+' : ''}{m.minMargin} 級分
+                    </span>
+                  </div>
+                  {Array.isArray(m.detail) && m.detail.length > 0 && (
+                    <div style={{ fontSize: '.74rem', color: '#5a6378', marginTop: 4, lineHeight: 1.5 }}>
+                      {m.detail.map((d, j) => (
+                        <span key={j}>順序{j + 1}｜{d.subs} 我{d.my}／去年{d.need}（{d.margin >= 0 ? '+' : ''}{d.margin}）{j < m.detail.length - 1 ? '　' : ''}</span>
+                      ))}
+                    </div>
+                  )}
+                  {m.partial && <div style={{ color: '#b06f00', fontSize: '.72rem', marginTop: 3 }}>＊部分關卡因缺對應科成績未計入</div>}
+                </div>
+              ))}
+              {col.list.length > 40 && <p style={{ color: '#5a6378', fontSize: '.78rem', textAlign: 'center', marginTop: 6 }}>還有 {col.list.length - 40} 個…</p>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {res && (
+        <p style={{ fontSize: '.76rem', color: '#5a6378', marginTop: 14 }}>
+          {res.note}<br />{res.source}
+        </p>
+      )}
+    </div>
+  );
+}
+
 /* ============ App ============ */
 
 export default function App() {
@@ -626,6 +730,7 @@ export default function App() {
     return <Onboarding student={student} onDone={(u) => { setStudent(u); setEditAnchor(false); }} />;
   }
   const enUS = student.school_type === 'us';
+  const isVoc = student.school_type === 'vocational';   // 技高（統測／四技二專）
   const appLang = enUS ? 'en' : 'zh-TW'; // 產品只有兩種：美國英文 / 台灣繁中
   const T3 = (zh, en, cn) => (appLang === 'en' ? en : appLang === 'zh-CN' ? cn : zh);
   const tabs = isTeacher
@@ -647,7 +752,7 @@ export default function App() {
       {!isTeacher && tab === 'dashboard' && (enUS ? <USOverview student={student} lang={appLang} /> : <Dashboard student={student} onQuickAdd={goQuickAdd} />)}
       {!isTeacher && tab === 'artifacts' && <Artifacts student={student} autoOpen={quickAdd} onAutoOpenDone={() => setQuickAdd(null)} />}
       {!isTeacher && tab === 'college' && <CollegeMatch student={student} lang={appLang} />}
-      {!isTeacher && tab === 'placement' && <Placement student={student} />}
+      {!isTeacher && tab === 'placement' && (isVoc ? <VtPlacement student={student} /> : <Placement student={student} />)}
       {!isTeacher && tab === 'timeline' && <Timeline />}
       {isTeacher && tab === 'students' && <TeacherStudents />}
       {isTeacher && tab === 'deadlines' && <TeacherDeadlines />}
@@ -800,7 +905,7 @@ function Login({ onDone }) {
     if (!name.trim() || email.indexOf('@') < 1) { setErr('Please enter the student\'s name and a valid email.'); return; }
     setBusy(true); setErr('');
     try {
-      const d = await api('signup', { name: name.trim(), email: email.trim(), grade });
+      const d = await api('signup', { name: name.trim(), email: email.trim(), grade, track: entry });
       setCreated(d);
       setMode('created');
     } catch (e) { setErr(e.message); } finally { setBusy(false); }
@@ -839,28 +944,14 @@ function Login({ onDone }) {
     );
   }
 
-  // ── 技高入口（落點/骨架建置中；素材與教練已可用，先預告）──
-  if (entry === 'vt') {
-    return (
-      <div className="login-wrap">
-        <div className="login-card">
-          <button className="btn-sm" onClick={() => setEntry(null)}>← 返回選擇入口</button>
-          <div style={{ display: 'inline-block', background: '#fff7e0', color: '#7a4a00', border: '1.5px solid #f0d98a', borderRadius: 999, padding: '3px 12px', fontSize: 12.5, fontWeight: 700, margin: '10px 0 6px' }}>技高線・搶先預告</div>
-          <h1 style={{ marginTop: 4 }}>技高落點<br /><span className="hl">建置中</span></h1>
-          <p className="sub">統測／四技二專甄選的落點分析正在建置（各群類篩選標準）。學習歷程素材倉庫與 AI 教練與高中共用，上線後即可使用。想第一時間收到通知，留個聯絡方式：</p>
-          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email（選填，通知上線）" autoComplete="email" />
-          <button className="btn" onClick={() => { if (email.indexOf('@') > 0) { setMode('vt_ok'); } }}>預約通知</button>
-          {mode === 'vt_ok' && <p style={{ color: '#15703c', fontSize: '.9rem', marginTop: 8 }}>已記下，謝謝！技高上線會通知你。</p>}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="login-wrap">
       <div className="login-card">
-        {entry === 'hs' && APP_MARKET !== 'us' && (
+        {APP_MARKET !== 'us' && (
           <button className="btn-sm" style={{ marginBottom: 10 }} onClick={() => setEntry(null)}>← 返回選擇入口</button>
+        )}
+        {entry === 'vt' && (
+          <div style={{ display: 'inline-block', background: '#eef2fb', color: '#16233b', border: '1.5px solid #c7d0e0', borderRadius: 999, padding: '3px 12px', fontSize: 12.5, fontWeight: 700, marginBottom: 8 }}>🛠 技高・統測／四技二專甄選</div>
         )}
         {mode === 'login' && (
           <>
