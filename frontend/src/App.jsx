@@ -713,6 +713,34 @@ function CoachPanel({ cols, schoolType }) {
   );
 }
 
+/* ============ 落點分區帶（夢幻／適中／安全 直式分區、可收合） ============ */
+const TIER_HINT = {
+  dream: '分數離門檻還有段距離 —— 當目標、衝衝看，但別只填這一區。',
+  prep:  '分數就落在門檻邊緣 —— 準備充分很有機會，這是你的主力區。',
+  safe:  '分數穩穩過第一階 —— 適合放進穩定名單，先保住基本盤。',
+};
+function TierBand({ col, children }) {
+  const [open, setOpen] = useState(true);
+  const n = col.list.length;
+  return (
+    <div className="tier">
+      <button className="tier-head" style={{ background: col.bg, color: col.color }} onClick={() => setOpen(!open)}>
+        <span className="tier-caret">{open ? '▾' : '▸'}</span>
+        <span className="tier-name">{col.label}</span>
+        <span className="tier-sub">{col.sub}</span>
+        <span className="tier-count">{n} 系</span>
+      </button>
+      {open && (
+        <div className="tier-body">
+          <p className="tier-hint">{TIER_HINT[col.key] || ''}</p>
+          {n === 0 ? <p className="tier-empty">這一區目前沒有符合的校系。</p>
+            : <div className="tier-grid">{children}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ============ 台灣落點分析（個人申請第一階段過篩） ============ */
 const TW_CLUSTERS = ['資訊學群', '工程學群', '數理化學群', '醫藥衛生學群', '生命科學學群', '生物資源學群', '地球與環境學群', '建築與設計學群', '藝術學群', '社會與心理學群', '大眾傳播學群', '外語學群', '文史哲學群', '教育學群', '法政學群', '管理學群', '財經學群', '遊憩與運動學群'];
 const TW_SUBS = ['國', '英', '數A', '數B', '社', '自'];
@@ -785,13 +813,12 @@ function Placement({ student }) {
       )}
 
       {res && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12, marginTop: 14 }}>
+        <div className="tiers">
+          <p className="tiers-legend">由難到穩：<b>夢幻</b> › <b>適中</b> › <b>安全</b>　點標題可收合。過一階 ≠ 錄取，第二階段仍需準備。</p>
           {cols.map((col) => (
-            <div key={col.key}>
-              <div style={{ fontWeight: 800, background: col.bg, color: col.color, borderRadius: 8, padding: '6px 12px', textAlign: 'center' }}>{col.label}（{col.list.length}）<span style={{ fontWeight: 600, fontSize: '.72rem', opacity: .8 }}>· {col.sub}</span></div>
-              {col.list.length === 0 && <p style={{ color: '#5a6378', fontSize: '.85rem', textAlign: 'center', marginTop: 8 }}>—</p>}
+            <TierBand key={col.key} col={col}>
               {col.list.slice(0, 40).map((m, i) => (
-                <div key={i} style={{ background: '#fff', border: '1.5px solid #d9d9d2', borderRadius: 10, padding: '10px 12px', marginTop: 8 }}>
+                <div key={i} className="dept-card">
                   <div style={{ fontWeight: 800, fontSize: '.92rem' }}>{m.school} {m.dept}</div>
                   <div style={{ color: '#5a6378', fontSize: '.8rem' }}>{m.cluster}{m.subjects ? '｜採計 ' + m.subjects : ''}</div>
                   {Array.isArray(m.checkFail) && m.checkFail.length > 0 ? (
@@ -818,8 +845,8 @@ function Placement({ student }) {
                   {m.partial && <div style={{ color: '#b06f00', fontSize: '.72rem', marginTop: 3 }}>＊部分關卡因缺對應科成績未計入</div>}
                 </div>
               ))}
-              {col.list.length > 40 && <p style={{ color: '#5a6378', fontSize: '.78rem', textAlign: 'center', marginTop: 6 }}>還有 {col.list.length - 40} 個…（縮小學群範圍可看更精準）</p>}
-            </div>
+              {col.list.length > 40 && <p className="tier-more">還有 {col.list.length - 40} 個…（縮小學群範圍可看更精準）</p>}
+            </TierBand>
           ))}
         </div>
       )}
@@ -900,13 +927,12 @@ function VtPlacement({ student }) {
       )}
 
       {res && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12, marginTop: 14 }}>
+        <div className="tiers">
+          <p className="tiers-legend">由難到穩：<b>夢幻</b> › <b>適中</b> › <b>安全</b>　點標題可收合。過一階 ≠ 錄取，第二階段仍需準備。</p>
           {cols.map((col) => (
-            <div key={col.key}>
-              <div style={{ fontWeight: 800, background: col.bg, color: col.color, borderRadius: 8, padding: '6px 12px', textAlign: 'center' }}>{col.label}（{col.list.length}）<span style={{ fontWeight: 600, fontSize: '.72rem', opacity: .8 }}>· {col.sub}</span></div>
-              {col.list.length === 0 && <p style={{ color: '#5a6378', fontSize: '.85rem', textAlign: 'center', marginTop: 8 }}>—</p>}
+            <TierBand key={col.key} col={col}>
               {col.list.slice(0, 40).map((m, i) => (
-                <div key={i} style={{ background: '#fff', border: '1.5px solid #d9d9d2', borderRadius: 10, padding: '10px 12px', marginTop: 8 }}>
+                <div key={i} className="dept-card">
                   <div style={{ fontWeight: 800, fontSize: '.92rem' }}>{m.school} {m.dept}</div>
                   <div style={{ color: '#5a6378', fontSize: '.8rem' }}>{m.group}{m.quota ? '｜名額 ' + m.quota : ''}</div>
                   <div style={{ fontSize: '.84rem', marginTop: 4 }}>
@@ -925,8 +951,8 @@ function VtPlacement({ student }) {
                   {m.partial && <div style={{ color: '#b06f00', fontSize: '.72rem', marginTop: 3 }}>＊部分關卡因缺對應科成績未計入</div>}
                 </div>
               ))}
-              {col.list.length > 40 && <p style={{ color: '#5a6378', fontSize: '.78rem', textAlign: 'center', marginTop: 6 }}>還有 {col.list.length - 40} 個…</p>}
-            </div>
+              {col.list.length > 40 && <p className="tier-more">還有 {col.list.length - 40} 個…</p>}
+            </TierBand>
           ))}
         </div>
       )}
@@ -944,15 +970,52 @@ function VtPlacement({ student }) {
 
 /* ============ App ============ */
 
+/* 四格大卡片主導覽的每格資訊（圖示＋一句說明） */
+const TAB_META = {
+  dashboard: { icon: '📊', zh: '看整體進度、下一步該做什麼', en: 'Your progress & what to do next' },
+  artifacts: { icon: '📦', zh: '蒐集、整理、上傳你的學習成果', en: 'Capture & organize your work' },
+  placement: { icon: '🎯', zh: '用成績推估各校系過篩難易', en: 'Estimate your admission fit' },
+  timeline:  { icon: '🗓️', zh: '重要截止日與提醒，別錯過', en: 'Key deadlines & reminders' },
+  college:   { icon: '🎓', zh: '建立你的選校清單', en: 'Build your college list' },
+  students:  { icon: '👥', zh: '學生總表與進度追蹤', en: 'All students & progress' },
+  deadlines: { icon: '🗓️', zh: '管理各項時程與截止日', en: 'Manage deadlines' },
+  reminders: { icon: '🔔', zh: '提醒與通知', en: 'Reminders & alerts' },
+};
+
+function Hub({ tabs, lang, isTeacher, name, onPick }) {
+  const en = lang === 'en';
+  return (
+    <div className="hub">
+      <div className="hub-head">
+        <h2>{en ? `Hi, ${name || ''} 👋` : `嗨，${name || ''} 👋`}</h2>
+        <p>{isTeacher ? (en ? 'What would you like to do?' : '今天想做什麼？')
+          : (en ? 'Pick where to go' : '選一個開始吧')}</p>
+      </div>
+      <div className="hub-grid">
+        {tabs.map(([key, label]) => {
+          const m = TAB_META[key] || {};
+          return (
+            <button key={key} className="hub-card" onClick={() => onPick(key)}>
+              <span className="hub-ico">{m.icon || '▶'}</span>
+              <span className="hub-label">{label}</span>
+              <span className="hub-desc">{en ? (m.en || '') : (m.zh || '')}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [student, setStudent] = useState(null);
-  const [tab, setTab] = useState('dashboard');
+  const [tab, setTab] = useState('home');
   const [quickAdd, setQuickAdd] = useState(null); // null | { semester }
   const [editAnchor, setEditAnchor] = useState(false);
 
   function goQuickAdd(semester) { setQuickAdd({ semester: semester || null }); setTab('artifacts'); }
 
-  if (!student) return <Login onDone={(u) => { setStudent(u); setTab(u.role === 'teacher' ? 'students' : 'dashboard'); }} />;
+  if (!student) return <Login onDone={(u) => { setStudent(u); setTab('home'); }} />;
 
   const isTeacher = student.role === 'teacher';
   if (!isTeacher && (!student.focus_anchor || editAnchor)) {
@@ -968,15 +1031,27 @@ export default function App() {
       ? [['dashboard', T3('總覽', 'Overview', '总览')], ['college', T3('選校', 'College', '选校')], ['timeline', T3('時程', 'Timeline', '时程')]]
       : [['dashboard', '總覽'], ['artifacts', '素材倉庫'], ['placement', '落點'], ['timeline', '時程']]);
 
+  const showHub = tab === 'home';
+  const sectionLabel = (tabs.find(([k]) => k === tab) || [null, ''])[1];
+
   return (
     <div className="shell">
       <header className="topbar">
-        <div className="brand">
+        <div className="brand" style={{ cursor: 'pointer' }} onClick={() => setTab('home')}>
           {enUS ? 'TIPS College Prep' : 'TIPS 學習歷程'}<small>{student.name}{isTeacher ? '（老師）' : ''}</small>
         </div>
         {!isTeacher && <button onClick={() => setEditAnchor(true)}>{enUS ? T3('方向', 'Focus', '方向') : '科別／組別'}</button>}
         <button onClick={() => { setToken(null); setStudent(null); }}>{enUS ? T3('登出', 'Log out', '登出') : '登出'}</button>
       </header>
+
+      {!showHub && (
+        <div className="section-bar">
+          <button className="back-home" onClick={() => setTab('home')}>← {enUS ? 'Home' : '首頁'}</button>
+          <span className="section-title">{sectionLabel}</span>
+        </div>
+      )}
+
+      {showHub && <Hub tabs={tabs} lang={appLang} isTeacher={isTeacher} name={student.name} onPick={setTab} />}
 
       {!isTeacher && tab === 'dashboard' && (enUS ? <USOverview student={student} lang={appLang} /> : <Dashboard student={student} onQuickAdd={goQuickAdd} />)}
       {!isTeacher && tab === 'artifacts' && <Artifacts student={student} autoOpen={quickAdd} onAutoOpenDone={() => setQuickAdd(null)} />}
@@ -986,14 +1061,6 @@ export default function App() {
       {isTeacher && tab === 'students' && <TeacherStudents />}
       {isTeacher && tab === 'deadlines' && <TeacherDeadlines />}
       {isTeacher && tab === 'reminders' && <TeacherReminders />}
-
-      <nav className="tabbar">
-        {tabs.map(([key, label]) => (
-          <button key={key} className={tab === key ? 'active' : ''} onClick={() => setTab(key)}>
-            <span>{label}</span>
-          </button>
-        ))}
-      </nav>
     </div>
   );
 }
@@ -1779,8 +1846,11 @@ function ArtifactForm({ student, onSaved, initialSemester }) {
         )}
       </div>
 
-      <label htmlFor="f-title">這是什麼？</label>
-      <input id="f-title" value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="例：專題期中成果、英文小論文、園遊會擺攤" />
+      <label htmlFor="f-title">這是什麼？<span style={{ fontWeight: 400, color: 'var(--graphite)', fontSize: '.78rem' }}>（點欄位選常見類型，也可以自己打）</span></label>
+      <input id="f-title" list="title-sugg" value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="例：專題期中成果、英文小論文、園遊會擺攤" />
+      <datalist id="title-sugg">
+        {['專題實作成果', '課堂作業／報告', '小論文／專題論文', '實驗或實作紀錄', '競賽參賽作品', '競賽獲獎紀錄', '證照／技能檢定', '社團活動', '幹部經歷', '志工／服務學習', '營隊／工作坊', '校外參訪心得', '自主學習計畫／成果', '線上課程證明', '成果發表／展演', '打工／實習經驗', '個人作品／專案'].map((o) => <option key={o} value={o} />)}
+      </datalist>
 
       <label htmlFor="f-file">拍照或選檔案（超過 4MB 的照片會自動幫你壓縮）</label>
       <input id="f-file" type="file" accept=".pdf,.jpg,.jpeg,.png,.mp3,.mp4" capture="environment" onChange={(e) => setFile(e.target.files[0] || null)} />
