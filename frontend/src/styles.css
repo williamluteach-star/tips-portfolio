@@ -212,11 +212,16 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .chip {
   border: 1.5px solid var(--rule); background: var(--paper); color: var(--graphite);
   border-radius: 999px; padding: 3px 12px; font-size: 0.78rem; font-weight: 700;
-  cursor: pointer; font-family: var(--font-body);
+  cursor: pointer; font-family: var(--font-body); white-space: nowrap; flex-shrink: 0;
 }
 .chip.on { border-color: var(--ink); background: var(--mark); color: var(--ink); }
 .chip.on.warn { background: #ffd9d4; border-color: var(--alert); color: var(--alert); }
-.chip-check { font-size: 0.78rem; font-weight: 700; color: var(--graphite); display: flex; align-items: center; gap: 4px; }
+.chip-check { font-size: 0.78rem; font-weight: 700; color: var(--graphite); display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; flex-shrink: 0; }
+.chip-check input { flex-shrink: 0; }
+/* 校內平台進度小標與說明 */
+.pack-lead { font-size: 0.76rem; color: var(--graphite); margin: 2px 0 6px; line-height: 1.5; }
+.pack-lead b { color: var(--ink); }
+.status-label { font-size: 0.74rem; font-weight: 800; color: var(--ink); margin-right: 2px; align-self: center; flex-shrink: 0; }
 .pack-body {
   background: #fff; border: 1.5px solid var(--rule); border-radius: var(--radius);
   padding: 14px 16px; margin-top: 8px; font-size: 0.9rem;
