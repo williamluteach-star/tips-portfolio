@@ -37,7 +37,7 @@ body {
 }
 
 /* ---------- 版面 ---------- */
-.shell { max-width: 720px; width: 100%; margin: 0 auto; padding: 16px 16px 96px; }
+.shell { max-width: 720px; width: 100%; margin: 0 auto; padding: 16px 16px 40px; }
 
 .topbar {
   display: flex; align-items: baseline; justify-content: space-between;
@@ -157,6 +157,53 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
   background: linear-gradient(transparent 60%, var(--mark) 60%);
   color: var(--paper); padding: 0 2px;
 }
+
+/* ---------- 四格大卡片主導覽（Hub） ---------- */
+.hub { padding: 8px 0 20px; }
+.hub-head { text-align: center; margin: 8px 0 20px; }
+.hub-head h2 { margin: 0 0 4px; font-size: 1.5rem; }
+.hub-head p { margin: 0; color: var(--graphite); font-size: 0.95rem; }
+.hub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.hub-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+  text-align: left; background: #fff; border: 2px solid var(--ink); border-radius: 18px;
+  padding: 22px 20px; cursor: pointer; font-family: var(--font-body); color: var(--ink);
+  min-height: 132px; box-shadow: 0 2px 0 var(--ink); transition: transform .1s ease, box-shadow .1s ease;
+}
+.hub-card:hover { transform: translateY(-2px); box-shadow: 0 6px 0 var(--ink); }
+.hub-card:active { transform: translateY(0); box-shadow: 0 1px 0 var(--ink); }
+.hub-ico { font-size: 2rem; line-height: 1; }
+.hub-label { font-size: 1.15rem; font-weight: 900; }
+.hub-desc { font-size: 0.82rem; color: var(--graphite); font-weight: 600; line-height: 1.45; }
+@media (max-width: 380px) { .hub-grid { grid-template-columns: 1fr; } }
+
+/* ---------- 區塊頂列（← 首頁 ＋ 標題） ---------- */
+.section-bar { display: flex; align-items: center; gap: 12px; margin: 4px 0 12px; }
+.back-home {
+  background: var(--ink); color: var(--paper); border: none; border-radius: 999px;
+  padding: 7px 15px; font: inherit; font-weight: 800; font-size: 0.85rem; cursor: pointer;
+}
+.section-title { font-size: 1.15rem; font-weight: 900; color: var(--ink); }
+
+/* ---------- 落點分區帶 ---------- */
+.tiers { margin-top: 14px; }
+.tiers-legend { font-size: 0.8rem; color: var(--graphite); margin-bottom: 12px; }
+.tiers-legend b { color: var(--ink); }
+.tier { margin-bottom: 14px; border-radius: 12px; overflow: hidden; border: 1.5px solid var(--rule); }
+.tier-head {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  border: none; padding: 11px 14px; font-family: var(--font-body); cursor: pointer; text-align: left;
+}
+.tier-caret { font-size: 0.9rem; opacity: 0.8; }
+.tier-name { font-weight: 900; font-size: 1.05rem; }
+.tier-sub { font-weight: 600; font-size: 0.76rem; opacity: 0.85; }
+.tier-count { margin-left: auto; font-weight: 800; font-size: 0.85rem; }
+.tier-body { padding: 4px 12px 12px; background: #fff; }
+.tier-hint { font-size: 0.82rem; color: var(--graphite); margin: 8px 2px 10px; line-height: 1.5; }
+.tier-empty { font-size: 0.85rem; color: var(--graphite); text-align: center; padding: 8px 0; }
+.tier-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.dept-card { background: #fff; border: 1.5px solid var(--rule); border-radius: 10px; padding: 10px 12px; }
+.tier-more { grid-column: 1 / -1; color: var(--graphite); font-size: 0.78rem; text-align: center; margin-top: 4px; }
 
 .empty-hint { color: var(--graphite); font-size: 0.88rem; padding: 24px 0; text-align: center; }
 .hint { font-size: 0.78rem; color: var(--graphite); margin-top: 6px; }
