@@ -1555,7 +1555,9 @@ function ArtifactPack({ artifact, onChanged }) {
 
   return (
     <div className="pack">
+      <p className="pack-lead">認證是在你<b>學校的校內學習歷程平台</b>上完成的（課程成果需老師認證）。TIPS 不會替你送出，只幫你把<b>檔案＋百字簡述</b>準備好，並讓你記錄自己走到哪一步。</p>
       <div className="status-row">
+        <span className="status-label">我的進度：</span>
         {SCHOOL_STATUS.map(([val, label]) => (
           <button key={val} disabled={busy}
             className={`chip ${status === val ? 'on' : ''} ${val === 'editing' && status === 'editing' ? 'warn' : ''}`}
@@ -1563,7 +1565,7 @@ function ArtifactPack({ artifact, onChanged }) {
             {label}
           </button>
         ))}
-        <label className="chip-check">
+        <label className="chip-check" title="是否已在校內平台把這件勾選送進中央資料庫（每學年課程成果 6 件、多元 10 件上限）">
           <input type="checkbox" checked={checked} disabled={busy}
             onChange={(e) => { setChecked(e.target.checked); save({ is_checked_to_central: e.target.checked }, '已更新'); }} />
           已勾選中央
