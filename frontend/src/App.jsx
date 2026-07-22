@@ -719,9 +719,11 @@ const TIER_HINT = {
   prep:  '分數就落在門檻邊緣 —— 準備充分很有機會，這是你的主力區。',
   safe:  '分數穩穩過第一階 —— 適合放進穩定名單，先保住基本盤。',
 };
-function TierBand({ col, children }) {
+function TierBand({ col, renderItem }) {
   const [open, setOpen] = useState(true);
+  const [shown, setShown] = useState(30);
   const n = col.list.length;
+  const visible = col.list.slice(0, shown);
   return (
     <div className="tier">
       <button className="tier-head" style={{ background: col.bg, color: col.color }} onClick={() => setOpen(!open)}>
@@ -733,8 +735,16 @@ function TierBand({ col, children }) {
       {open && (
         <div className="tier-body">
           <p className="tier-hint">{TIER_HINT[col.key] || ''}</p>
-          {n === 0 ? <p className="tier-empty">這一區目前沒有符合的校系。</p>
-            : <div className="tier-grid">{children}</div>}
+          {n === 0 ? <p className="tier-empty">這一區目前沒有符合的校系。</p> : (
+            <>
+              <div className="tier-grid">{visible.map(renderItem)}</div>
+              {n > shown && (
+                <button className="tier-more-btn" onClick={() => setShown(shown + 30)}>
+                  載入更多（還有 {n - shown} 個）
+                </button>
+              )}
+            </>
+          )}
         </div>
       )}
     </div>
@@ -767,6 +777,9 @@ function Placement({ student }) {
     { key: 'prep', label: '適中', sub: '一階邊緣', bg: '#fce9c8', color: '#b06f00', list: res.prep || [] },
     { key: 'safe', label: '安全', sub: '穩過一階', bg: '#d7efe0', color: '#15703c', list: res.safe || [] },
   ] : [];
+  const [q, setQ] = useState('');
+  const qq = q.trim();
+  const fcols = qq ? cols.map((c) => Object.assign({}, c, { list: c.list.filter((m) => ((m.school || '') + (m.dept || '') + (m.cluster || '') + (m.group || '')).indexOf(qq) >= 0) })) : cols;
 
   return (
     <div style={{ padding: '10px 4px 90px' }}>
@@ -815,39 +828,38 @@ function Placement({ student }) {
       {res && (
         <div className="tiers">
           <p className="tiers-legend">由難到穩：<b>夢幻</b> › <b>適中</b> › <b>安全</b>　點標題可收合。過一階 ≠ 錄取，第二階段仍需準備。</p>
-          {cols.map((col) => (
-            <TierBand key={col.key} col={col}>
-              {col.list.slice(0, 40).map((m, i) => (
-                <div key={i} className="dept-card">
-                  <div style={{ fontWeight: 800, fontSize: '.92rem' }}>{m.school} {m.dept}</div>
-                  <div style={{ color: '#5a6378', fontSize: '.8rem' }}>{m.cluster}{m.subjects ? '｜採計 ' + m.subjects : ''}</div>
-                  {Array.isArray(m.checkFail) && m.checkFail.length > 0 ? (
-                    <div style={{ fontSize: '.82rem', marginTop: 4, color: '#8e1f34', fontWeight: 700 }}>
-                      ✕ 檢定未過：{m.checkFail.join('、')}
-                      <div style={{ fontWeight: 400, fontSize: '.74rem', color: '#5a6378', marginTop: 2 }}>檢定沒過就無法進入倍率篩選，需先拉高該科。</div>
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: '.84rem', marginTop: 4 }}>
-                      最吃緊關卡：<b>{m.binding || '—'}</b>
-                      <span style={{ color: m.minMargin >= 0 ? '#15703c' : '#8e1f34', fontWeight: 800, marginLeft: 6 }}>
-                        {m.minMargin >= 0 ? '+' : ''}{m.minMargin} 級分
-                      </span>
-                    </div>
-                  )}
-                  {(!m.checkFail || !m.checkFail.length) && Array.isArray(m.detail) && m.detail.length > 0 && (
-                    <div style={{ fontSize: '.74rem', color: '#5a6378', marginTop: 4, lineHeight: 1.5 }}>
-                      {m.detail.map((d, j) => (
-                        <span key={j}>順序{j + 1}｜{d.subs} 我{d.my}／去年{d.need}（{d.margin >= 0 ? '+' : ''}{d.margin}）{j < m.detail.length - 1 ? '　' : ''}</span>
-                      ))}
-                    </div>
-                  )}
-                  {m.check && <div style={{ fontSize: '.72rem', color: '#8a94a6', marginTop: 3 }}>檢定門檻：{m.check}</div>}
-                  {m.partial && <div style={{ color: '#b06f00', fontSize: '.72rem', marginTop: 3 }}>＊部分關卡因缺對應科成績未計入</div>}
-                </div>
-              ))}
-              {col.list.length > 40 && <p className="tier-more">還有 {col.list.length - 40} 個…（縮小學群範圍可看更精準）</p>}
-            </TierBand>
+          <input className="tier-filter" value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔎 篩選校名或系名（例：臺大、資工、設計）" />
+          {fcols.map((col) => (
+            <TierBand key={col.key} col={col} renderItem={(m, i) => (
+              <div key={i} className="dept-card">
+                <div style={{ fontWeight: 800, fontSize: '.92rem' }}>{m.school} {m.dept}</div>
+                <div style={{ color: '#5a6378', fontSize: '.8rem' }}>{m.cluster}{m.subjects ? '｜採計 ' + m.subjects : ''}</div>
+                {Array.isArray(m.checkFail) && m.checkFail.length > 0 ? (
+                  <div style={{ fontSize: '.82rem', marginTop: 4, color: '#8e1f34', fontWeight: 700 }}>
+                    ✕ 檢定未過：{m.checkFail.join('、')}
+                    <div style={{ fontWeight: 400, fontSize: '.74rem', color: '#5a6378', marginTop: 2 }}>檢定沒過就無法進入倍率篩選，需先拉高該科。</div>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '.84rem', marginTop: 4 }}>
+                    最吃緊關卡：<b>{m.binding || '—'}</b>
+                    <span style={{ color: m.minMargin >= 0 ? '#15703c' : '#8e1f34', fontWeight: 800, marginLeft: 6 }}>
+                      {m.minMargin >= 0 ? '+' : ''}{m.minMargin} 級分
+                    </span>
+                  </div>
+                )}
+                {(!m.checkFail || !m.checkFail.length) && Array.isArray(m.detail) && m.detail.length > 0 && (
+                  <div style={{ fontSize: '.74rem', color: '#5a6378', marginTop: 4, lineHeight: 1.5 }}>
+                    {m.detail.map((d, j) => (
+                      <span key={j}>順序{j + 1}｜{d.subs} 我{d.my}／去年{d.need}（{d.margin >= 0 ? '+' : ''}{d.margin}）{j < m.detail.length - 1 ? '　' : ''}</span>
+                    ))}
+                  </div>
+                )}
+                {m.check && <div style={{ fontSize: '.72rem', color: '#8a94a6', marginTop: 3 }}>檢定門檻：{m.check}</div>}
+                {m.partial && <div style={{ color: '#b06f00', fontSize: '.72rem', marginTop: 3 }}>＊部分關卡因缺對應科成績未計入</div>}
+              </div>
+            )} />
           ))}
+          {qq && fcols.every((c) => c.list.length === 0) && <p className="tier-empty">找不到含「{qq}」的校系，換個關鍵字試試。</p>}
         </div>
       )}
 
@@ -888,6 +900,9 @@ function VtPlacement({ student }) {
     { key: 'prep', label: '適中', sub: '一階邊緣', bg: '#fce9c8', color: '#b06f00', list: res.prep || [] },
     { key: 'safe', label: '安全', sub: '穩過一階', bg: '#d7efe0', color: '#15703c', list: res.safe || [] },
   ] : [];
+  const [q, setQ] = useState('');
+  const qq = q.trim();
+  const fcols = qq ? cols.map((c) => Object.assign({}, c, { list: c.list.filter((m) => ((m.school || '') + (m.dept || '') + (m.cluster || '') + (m.group || '')).indexOf(qq) >= 0) })) : cols;
 
   return (
     <div style={{ padding: '10px 4px 90px' }}>
@@ -929,31 +944,30 @@ function VtPlacement({ student }) {
       {res && (
         <div className="tiers">
           <p className="tiers-legend">由難到穩：<b>夢幻</b> › <b>適中</b> › <b>安全</b>　點標題可收合。過一階 ≠ 錄取，第二階段仍需準備。</p>
-          {cols.map((col) => (
-            <TierBand key={col.key} col={col}>
-              {col.list.slice(0, 40).map((m, i) => (
-                <div key={i} className="dept-card">
-                  <div style={{ fontWeight: 800, fontSize: '.92rem' }}>{m.school} {m.dept}</div>
-                  <div style={{ color: '#5a6378', fontSize: '.8rem' }}>{m.group}{m.quota ? '｜名額 ' + m.quota : ''}</div>
-                  <div style={{ fontSize: '.84rem', marginTop: 4 }}>
-                    最吃緊關卡：<b>{m.binding || '—'}</b>
-                    <span style={{ color: m.minMargin >= 0 ? '#15703c' : '#8e1f34', fontWeight: 800, marginLeft: 6 }}>
-                      {m.minMargin >= 0 ? '+' : ''}{m.minMargin} 級分
-                    </span>
-                  </div>
-                  {Array.isArray(m.detail) && m.detail.length > 0 && (
-                    <div style={{ fontSize: '.74rem', color: '#5a6378', marginTop: 4, lineHeight: 1.5 }}>
-                      {m.detail.map((d, j) => (
-                        <span key={j}>順序{j + 1}｜{d.subs} 我{d.my}／去年{d.need}（{d.margin >= 0 ? '+' : ''}{d.margin}）{j < m.detail.length - 1 ? '　' : ''}</span>
-                      ))}
-                    </div>
-                  )}
-                  {m.partial && <div style={{ color: '#b06f00', fontSize: '.72rem', marginTop: 3 }}>＊部分關卡因缺對應科成績未計入</div>}
+          <input className="tier-filter" value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔎 篩選校名或系名（例：臺科大、機械、餐飲）" />
+          {fcols.map((col) => (
+            <TierBand key={col.key} col={col} renderItem={(m, i) => (
+              <div key={i} className="dept-card">
+                <div style={{ fontWeight: 800, fontSize: '.92rem' }}>{m.school} {m.dept}</div>
+                <div style={{ color: '#5a6378', fontSize: '.8rem' }}>{m.group}{m.quota ? '｜名額 ' + m.quota : ''}</div>
+                <div style={{ fontSize: '.84rem', marginTop: 4 }}>
+                  最吃緊關卡：<b>{m.binding || '—'}</b>
+                  <span style={{ color: m.minMargin >= 0 ? '#15703c' : '#8e1f34', fontWeight: 800, marginLeft: 6 }}>
+                    {m.minMargin >= 0 ? '+' : ''}{m.minMargin} 級分
+                  </span>
                 </div>
-              ))}
-              {col.list.length > 40 && <p className="tier-more">還有 {col.list.length - 40} 個…</p>}
-            </TierBand>
+                {Array.isArray(m.detail) && m.detail.length > 0 && (
+                  <div style={{ fontSize: '.74rem', color: '#5a6378', marginTop: 4, lineHeight: 1.5 }}>
+                    {m.detail.map((d, j) => (
+                      <span key={j}>順序{j + 1}｜{d.subs} 我{d.my}／去年{d.need}（{d.margin >= 0 ? '+' : ''}{d.margin}）{j < m.detail.length - 1 ? '　' : ''}</span>
+                    ))}
+                  </div>
+                )}
+                {m.partial && <div style={{ color: '#b06f00', fontSize: '.72rem', marginTop: 3 }}>＊部分關卡因缺對應科成績未計入</div>}
+              </div>
+            )} />
           ))}
+          {qq && fcols.every((c) => c.list.length === 0) && <p className="tier-empty">找不到含「{qq}」的校系，換個關鍵字試試。</p>}
         </div>
       )}
 
@@ -2124,24 +2138,59 @@ function TeacherReminders() {
 
 /* ============ 時程 ============ */
 
+/* 美國申請週期里程碑（非特定日期的通用時序，實際日期以各校官網為準） */
+const US_MILESTONES = [
+  { when: 'Grades 9–10', title: 'Build depth, not a long list', note: 'Go deep in 2–3 activities toward your intended direction. Keep a running brag sheet of what you do and what you learned.' },
+  { when: 'Grade 11 · Fall', title: 'Rigor + PSAT', note: 'Take the most rigorous classes you can handle. Sit the PSAT (National Merit). Start a testing plan.' },
+  { when: 'Grade 11 · Winter–Spring', title: 'SAT/ACT + college list', note: 'Take the SAT/ACT. Research schools and draft a balanced list (reach / target / likely). Line up recommenders.' },
+  { when: 'Grade 11 · Summer', title: 'Draft your essay, finalize list', note: 'Draft the Common App personal statement. Visit or research schools. Lock a balanced list of ~8–12.' },
+  { when: 'Grade 12 · Aug–Sep', title: 'Common App opens (Aug 1)', note: 'Create your Common App, add schools, request transcripts and recommendation letters early.' },
+  { when: 'Grade 12 · Oct', title: 'Financial aid + finish essays', note: 'FAFSA and CSS Profile open. Finish supplemental essays. Confirm each school’s exact deadlines on its site.' },
+  { when: 'Grade 12 · Nov 1', title: 'Early Decision / Early Action', note: 'ED/EA deadlines are typically Nov 1 or Nov 15. ED is binding — apply early only where you’re sure.' },
+  { when: 'Grade 12 · Jan 1', title: 'Regular Decision deadlines', note: 'Many RD deadlines fall on Jan 1–15. Submit well before midnight in the college’s time zone.' },
+  { when: 'Grade 12 · Feb', title: 'Mid-year reports', note: 'Your school sends mid-year grades. Keep grades up — offers can be rescinded for big drops (senioritis).' },
+  { when: 'Grade 12 · Mar–Apr', title: 'Decisions arrive', note: 'Compare admits and financial-aid offers. Attend admitted-student events if you can.' },
+  { when: 'Grade 12 · May 1', title: 'Decision Day — commit', note: 'Deposit at your chosen school by May 1 (National College Decision Day).' },
+];
+
 function Timeline({ lang }) {
   const EN = lang === 'en';
   const L = (zh, en) => (EN ? en : zh);
   const [items, setItems] = useState(null);
   const [err, setErr] = useState('');
 
+  // 美國線：顯示美國申請週期里程碑（不打台灣截止日 API）
   useEffect(() => {
+    if (EN) return;
     api('listDeadlines').then(setItems).catch((e) => setErr(e.message));
-  }, []);
+  }, [EN]);
+
+  if (EN) {
+    return (
+      <>
+        <h2>US application timeline</h2>
+        <p className="hint" style={{ marginBottom: 12 }}>A general roadmap of the US application cycle. Exact dates vary by year and college — always confirm on each school’s official site.</p>
+        {US_MILESTONES.map((m, i) => (
+          <div key={i} className="deadline">
+            <span className="d-date d-period">{m.when}</span>
+            <div>
+              <div className="d-title">{m.title}</div>
+              <div className="d-note">{m.note}</div>
+            </div>
+          </div>
+        ))}
+      </>
+    );
+  }
 
   if (err) return <p className="err">{err}</p>;
-  if (!items) return <p className="empty-hint">{L('載入中…', 'Loading…')}</p>;
+  if (!items) return <p className="empty-hint">載入中…</p>;
 
   return (
     <>
-      <h2>{L('未來一年的重要時程', 'Upcoming deadlines')}</h2>
-      <DeadlineList items={items} lang={lang} emptyText={L('目前沒有排定的截止日。', 'No deadlines scheduled yet.')} />
-      <p className="hint">{L('錯過「勾選至中央資料庫」的截止日，該學年資料將無法送交大學審查。', 'Deadlines shown here are set by your counselor — always confirm each college’s own dates on its official site.')}</p>
+      <h2>未來一年的重要時程</h2>
+      <DeadlineList items={items} lang={lang} emptyText="目前沒有排定的截止日。" />
+      <p className="hint">錯過「勾選至中央資料庫」的截止日，該學年資料將無法送交大學審查。</p>
     </>
   );
 }
