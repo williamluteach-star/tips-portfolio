@@ -658,6 +658,61 @@ function USOverview({ student, lang }) {
   );
 }
 
+/* ============ AI 選校教練（讀學習歷程 × 校系參採項目） ============ */
+const COACH_MAX = 6;
+function CoachPanel({ cols, schoolType }) {
+  const [sel, setSel] = useState([]);      // 已選校系 [{dept_id, school, dept, group, tier}]
+  const [out, setOut] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const items = [];
+  (cols || []).forEach((c) => (c.list || []).forEach((m) => {
+    if (m && (m.dept_id || (m.school && m.dept)) && !(Array.isArray(m.checkFail) && m.checkFail.length)) {
+      items.push({ dept_id: m.dept_id || '', school: m.school || '', dept: m.dept || '', group: m.group || '', tier: c.label });
+    }
+  }));
+  const keyOf = (m) => (m.dept_id || (m.school + m.dept + (m.group || '')));
+  const isSel = (m) => sel.some((s) => keyOf(s) === keyOf(m));
+  function toggle(m) {
+    setErr('');
+    const cur = sel.slice();
+    const i = cur.findIndex((s) => keyOf(s) === keyOf(m));
+    if (i >= 0) cur.splice(i, 1);
+    else { if (cur.length >= COACH_MAX) { setErr('一次最多選 ' + COACH_MAX + ' 個校系，教練才能給精準建議。'); return; } cur.push(m); }
+    setSel(cur);
+  }
+  async function ask() {
+    if (!sel.length) { setErr('先從上面點選 1–' + COACH_MAX + ' 個想問的校系。'); return; }
+    setBusy(true); setErr(''); setOut('');
+    try {
+      const d = await api('coachDirection', { school_type: schoolType, targets: sel.map((s) => ({ dept_id: s.dept_id, school: s.school, dept: s.dept, group: s.group, tier: s.tier })) });
+      setOut((d && d.text) || '');
+    } catch (e) { setErr(e.message); }
+    setBusy(false);
+  }
+  if (!items.length) return null;
+  return (
+    <div style={{ marginTop: 18, background: '#f4faf7', border: '1.5px solid #cfe9df', borderRadius: 14, padding: '14px 16px' }}>
+      <div style={{ fontWeight: 800, fontSize: '1rem', color: '#0a4d3f' }}>🧭 問 AI 選校教練</div>
+      <p style={{ color: '#5a6378', fontSize: '.85rem', margin: '4px 0 10px' }}>從落點結果點選你想深入了解的校系（最多 {COACH_MAX} 個）。教練會讀你的學習歷程、對照每個校系「實際參採什麼」，告訴你方向合不合、還缺哪些採計項目。<b>只引導、不代寫、不保證錄取。</b></p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        {items.slice(0, 40).map((m, i) => (
+          <button key={i} onClick={() => toggle(m)} style={{ border: '1.5px solid ' + (isSel(m) ? '#0f6b57' : '#d9d9d2'), background: isSel(m) ? '#0f6b57' : '#fff', color: isSel(m) ? '#fff' : '#16233b', borderRadius: 999, padding: '5px 11px', fontSize: '.8rem', fontWeight: 700, cursor: 'pointer' }}>
+            {isSel(m) ? '✓ ' : ''}{m.school} {m.dept}<span style={{ opacity: .7, marginLeft: 4, fontSize: '.72rem' }}>· {m.tier}</span>
+          </button>
+        ))}
+      </div>
+      <button onClick={ask} disabled={busy} style={{ marginTop: 12, background: '#0f6b57', color: '#fff', border: 'none', borderRadius: 10, padding: '11px 20px', fontWeight: 800, cursor: busy ? 'default' : 'pointer', opacity: busy ? .7 : 1 }}>
+        {busy ? '教練正在讀你的歷程並比對參採項目…（約 1 分鐘）' : (sel.length ? '問教練（已選 ' + sel.length + ' 個）：我適合嗎？還缺什麼？' : '問教練：這些校系我適合嗎？還缺什麼？')}
+      </button>
+      {err && <p style={{ color: '#b3261e', fontSize: '.85rem' }}>{err}</p>}
+      {out && (
+        <div style={{ marginTop: 12, background: '#fff', border: '1.5px solid #cfe9df', borderRadius: 12, padding: '14px 16px', fontSize: '.9rem', lineHeight: 1.7, whiteSpace: 'pre-wrap', color: '#16233b' }}>{out}</div>
+      )}
+    </div>
+  );
+}
+
 /* ============ 台灣落點分析（個人申請第一階段過篩） ============ */
 const TW_CLUSTERS = ['資訊學群', '工程學群', '數理化學群', '醫藥衛生學群', '生命科學學群', '生物資源學群', '地球與環境學群', '建築與設計學群', '藝術學群', '社會與心理學群', '大眾傳播學群', '外語學群', '文史哲學群', '教育學群', '法政學群', '管理學群', '財經學群', '遊憩與運動學群'];
 const TW_SUBS = ['國', '英', '數A', '數B', '社', '自'];
@@ -769,6 +824,8 @@ function Placement({ student }) {
         </div>
       )}
 
+      {res && <CoachPanel cols={cols} schoolType="general" />}
+
       {res && (
         <p style={{ fontSize: '.76rem', color: '#5a6378', marginTop: 14 }}>
           {res.note}<br />{res.source}<br />
@@ -873,6 +930,8 @@ function VtPlacement({ student }) {
           ))}
         </div>
       )}
+
+      {res && <CoachPanel cols={cols} schoolType="vocational" />}
 
       {res && (
         <p style={{ fontSize: '.76rem', color: '#5a6378', marginTop: 14 }}>
