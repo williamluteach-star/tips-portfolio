@@ -992,6 +992,7 @@ const TAB_META = {
   timeline:  { icon: '🗓️', zh: '重要截止日與提醒，別錯過', en: 'Key deadlines & reminders' },
   college:   { icon: '🎓', zh: '建立你的選校清單', en: 'Build your college list' },
   students:  { icon: '👥', zh: '學生總表與進度追蹤', en: 'All students & progress' },
+  certs:     { icon: '✅', zh: '待你確認認證的素材', en: 'Items awaiting your sign-off' },
   deadlines: { icon: '🗓️', zh: '管理各項時程與截止日', en: 'Manage deadlines' },
   reminders: { icon: '🔔', zh: '提醒與通知', en: 'Reminders & alerts' },
 };
@@ -1040,7 +1041,7 @@ export default function App() {
   const appLang = enUS ? 'en' : 'zh-TW'; // 產品只有兩種：美國英文 / 台灣繁中
   const T3 = (zh, en, cn) => (appLang === 'en' ? en : appLang === 'zh-CN' ? cn : zh);
   const tabs = isTeacher
-    ? [['students', '學生總表'], ['deadlines', '時程管理'], ['reminders', '提醒']]
+    ? [['students', '學生總表'], ['certs', '待認證'], ['deadlines', '時程管理'], ['reminders', '提醒']]
     : (enUS
       ? [['dashboard', T3('總覽', 'Overview', '总览')], ['college', T3('選校', 'College', '选校')], ['timeline', T3('時程', 'Timeline', '时程')]]
       : [['dashboard', '總覽'], ['artifacts', '素材倉庫'], ['placement', '落點'], ['timeline', '時程']]);
@@ -1073,6 +1074,7 @@ export default function App() {
       {!isTeacher && tab === 'placement' && (isVoc ? <VtPlacement student={student} /> : <Placement student={student} />)}
       {!isTeacher && tab === 'timeline' && <Timeline lang={appLang} />}
       {isTeacher && tab === 'students' && <TeacherStudents />}
+      {isTeacher && tab === 'certs' && <TeacherCerts />}
       {isTeacher && tab === 'deadlines' && <TeacherDeadlines />}
       {isTeacher && tab === 'reminders' && <TeacherReminders />}
     </div>
@@ -1522,49 +1524,66 @@ function QuotaBar({ bySemester, schoolType }) {
 /* ============ AI 反思教練（Phase 2） ============ */
 
 function ArtifactCoach({ artifact }) {
-  const [mode, setMode] = useState(null);
+  const [reflectOut, setReflectOut] = useState('');
+  const [sumOut, setSumOut] = useState('');
   const [draft, setDraft] = useState(artifact.summary_100 || '');
-  const [out, setOut] = useState('');
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState('');        // '' | 'reflect' | 'summary'
   const [err, setErr] = useState('');
+  const [remaining, setRemaining] = useState(null);
 
-  async function ask(action, payload) {
-    setBusy(true); setErr(''); setOut('');
-    try { const d = await api(action, payload); setOut(d.text); }
+  async function reflect(force) {
+    setBusy('reflect'); setErr('');
+    try { const d = await api('aiReflect', { artifact_id: artifact.artifact_id, force: !!force }); setReflectOut(d.text); }
     catch (e) { setErr(e.message); }
-    finally { setBusy(false); }
+    finally { setBusy(''); }
+  }
+  async function checkSummary() {
+    if (!draft.trim()) { setErr('先寫下你的簡述草稿（幾句話就好），教練才能給建議。'); return; }
+    setBusy('summary'); setErr('');
+    try {
+      try { await api('updateArtifact', { artifact_id: artifact.artifact_id, summary_100: draft }); } catch (e) { /* 存簡述失敗不擋健檢 */ }
+      const d = await api('aiSummary', { artifact_id: artifact.artifact_id, draft });
+      setSumOut(d.text);
+      if (typeof d.remaining === 'number') setRemaining(d.remaining);
+    } catch (e) { setErr(e.message); }
+    finally { setBusy(''); }
   }
 
   return (
     <div className="coach">
-      <div className="coach-btns">
-        <button className="btn-sm" disabled={busy}
-          onClick={() => { setMode('reflect'); ask('aiReflect', { artifact_id: artifact.artifact_id }); }}>
-          🧑‍🏫 教練引導反思
-        </button>
-        <button className="btn-sm" disabled={busy}
-          onClick={() => setMode(mode === 'summary' ? null : 'summary')}>
-          ✍️ 百字簡述健檢
-        </button>
-      </div>
-      {mode === 'summary' && (
-        <div className="coach-draft">
-          <textarea rows="3" value={draft} onChange={(e) => setDraft(e.target.value)}
-            placeholder="先寫下你的 100 字簡述草稿（幾句話就好），教練才能給建議…" />
-          <button className="btn-sm" disabled={busy || !draft.trim()}
-            onClick={() => ask('aiSummary', { artifact_id: artifact.artifact_id, draft })}>
-            送給教練檢查
-          </button>
-        </div>
-      )}
-      {busy && <p className="empty-hint">教練思考中…（約 10–20 秒）</p>}
-      {err && <p className="err">{err}</p>}
-      {out && (
+      {/* 1) 引導反思——在 100 字上方 */}
+      <button className="btn-sm" disabled={!!busy} onClick={() => reflect(false)}>🧑‍🏫 教練引導反思</button>
+      {busy === 'reflect' && <p className="empty-hint">教練思考中…（約 10–20 秒）</p>}
+      {reflectOut && (
         <div className="coach-out">
-          <pre>{out}</pre>
-          <button className="btn-sm" onClick={() => navigator.clipboard.writeText(out)}>複製教練回覆</button>
+          <pre>{reflectOut}</pre>
+          <div className="coach-btns">
+            <button className="btn-sm" onClick={() => navigator.clipboard.writeText(reflectOut)}>複製</button>
+            <button className="btn-ghost" disabled={!!busy} onClick={() => reflect(true)}>↻ 重新產生（會再用一次 AI）</button>
+          </div>
         </div>
       )}
+
+      {/* 2) 100 字簡述 */}
+      <label className="coach-label">你的 100 字簡述</label>
+      <textarea className="coach-ta" rows="3" value={draft} onChange={(e) => setDraft(e.target.value)}
+        placeholder="寫下你的 100 字簡述草稿（幾句話就好）…" />
+
+      {/* 3) 簡述健檢——在 100 字下方 */}
+      <div className="coach-sum-row">
+        <button className="btn-sm" disabled={!!busy || !draft.trim()} onClick={checkSummary}>
+          ✍️ 送給教練檢查{remaining !== null ? `（本件剩 ${remaining} 次）` : ''}
+        </button>
+        <span className="coach-quota">每件最多 3 次・同段沒改不重算</span>
+      </div>
+      {busy === 'summary' && <p className="empty-hint">教練檢查中…（約 10–20 秒）</p>}
+      {sumOut && (
+        <div className="coach-out">
+          <pre>{sumOut}</pre>
+          <button className="btn-sm" onClick={() => navigator.clipboard.writeText(sumOut)}>複製教練回覆</button>
+        </div>
+      )}
+      {err && <p className="err">{err}</p>}
     </div>
   );
 }
@@ -1616,6 +1635,14 @@ const SCHOOL_STATUS = [
   ['submitted', '已送認證'],
   ['certified', '認證成功'],
 ];
+// 進度步驟條：前三步學生自己點；第四步「認證成功」只能老師確認
+const STEP_DEFS = [
+  { val: '', label: '未上傳校內', short: '還沒上傳到學校的校內平台' },
+  { val: 'editing', label: '編輯中', short: '已在校內平台建立、編輯中' },
+  { val: 'submitted', label: '已送認證', short: '已在校內平台按下「送出認證」' },
+  { val: 'certified', label: '認證成功', short: '老師確認後才會亮' },
+];
+const STEP_IDX = { '': 0, editing: 1, submitted: 2, certified: 3 };
 
 function ArtifactPack({ artifact, onChanged }) {
   const [open, setOpen] = useState(false);
@@ -1637,24 +1664,35 @@ function ArtifactPack({ artifact, onChanged }) {
   return (
     <div className="pack">
       <p className="pack-lead">認證是在你<b>學校的校內學習歷程平台</b>上完成的（課程成果需老師認證）。TIPS 不會替你送出，只幫你把<b>檔案＋百字簡述</b>準備好，並讓你記錄自己走到哪一步。</p>
-      <div className="status-row">
-        <span className="status-label">我的進度：</span>
-        {SCHOOL_STATUS.map(([val, label]) => (
-          <button key={val} disabled={busy}
-            className={`chip ${status === val ? 'on' : ''} ${val === 'editing' && status === 'editing' ? 'warn' : ''}`}
-            onClick={() => { setStatus(val); save({ is_uploaded_to_school: val }, '狀態已更新'); }}>
-            {label}
-          </button>
-        ))}
-        <label className="chip-check" title="是否已在校內平台把這件勾選送進中央資料庫（每學年課程成果 6 件、多元 10 件上限）">
-          <input type="checkbox" checked={checked} disabled={busy}
-            onChange={(e) => { setChecked(e.target.checked); save({ is_checked_to_central: e.target.checked }, '已更新'); }} />
-          已勾選中央
-        </label>
+      <div className="status-label">我的進度（前三步自己標，最後一步由老師確認）</div>
+      <div className="stepper">
+        {STEP_DEFS.map((st, i) => {
+          const cur = STEP_IDX[status] || 0;
+          const teacherStep = i === 3;
+          const clickable = !teacherStep && !busy;
+          const dot = i < cur ? '✓' : (teacherStep && status === 'certified' ? '✓' : String(i + 1));
+          const cls = 'step' + (i < cur ? ' done' : '') + (i === cur ? ' active' : '') +
+            (teacherStep ? ' teacher' : '') + (teacherStep && status === 'certified' ? ' cert' : '');
+          return (
+            <button key={st.val || 'none'} type="button" className={cls} disabled={!clickable}
+              title={st.short}
+              onClick={() => { if (clickable) { setStatus(st.val); save({ is_uploaded_to_school: st.val }, '狀態已更新'); } }}>
+              <span className="step-dot">{dot}</span>
+              <span className="step-label">{st.label}</span>
+            </button>
+          );
+        })}
       </div>
-      {status === 'editing' && (
-        <p className="err">⚠️ 停在「編輯中」老師收不到！到校內平台按下「送出認證」後，回來把狀態改成「已送認證」。</p>
-      )}
+      {status === '' && <p className="step-cap">上傳到學校平台後，回來點「編輯中」開始記錄進度。</p>}
+      {status === 'editing' && <p className="step-cap warn">⚠️ 別停在「編輯中」！到校內平台按「送出認證」後，回來點「已送認證」。</p>}
+      {status === 'submitted' && <p className="step-cap">✅ 已送出，等<b>老師在系統確認</b>後會自動變成「認證成功」。</p>}
+      {status === 'certified' && <p className="step-cap ok">🎉 老師已確認「認證成功」！</p>}
+
+      <label className="central-toggle" title="是否已在校內平台把這件勾選送進中央資料庫（每學年課程成果 6 件、多元 10 件上限）">
+        <input type="checkbox" checked={checked} disabled={busy}
+          onChange={(e) => { setChecked(e.target.checked); save({ is_checked_to_central: e.target.checked }, '已更新'); }} />
+        <span>已勾選到中央資料庫</span>
+      </label>
 
       <button className="btn-sm" onClick={() => setOpen(!open)}>📦 上傳包{open ? '（收起）' : '——帶去校內平台 2 分鐘搞定'}</button>
       {open && (
@@ -1920,6 +1958,48 @@ const TASK_TYPES = {
   upload_diverse: '多元表現上傳',
   other: '其他',
 };
+
+function TeacherCerts() {
+  const [rows, setRows] = useState(null);
+  const [err, setErr] = useState('');
+  const [busyId, setBusyId] = useState('');
+
+  useEffect(() => {
+    api('teacherPendingCerts').then(setRows).catch((e) => setErr(e.message));
+  }, []);
+
+  async function confirm(a) {
+    setBusyId(a.artifact_id); setErr('');
+    try {
+      await api('teacherCertify', { artifact_id: a.artifact_id });
+      setRows((prev) => (prev || []).filter((x) => x.artifact_id !== a.artifact_id));
+    } catch (e) { setErr(e.message); }
+    finally { setBusyId(''); }
+  }
+
+  if (err) return <p className="err">{err}</p>;
+  if (!rows) return <p className="empty-hint">載入中…</p>;
+
+  return (
+    <div style={{ paddingBottom: 24 }}>
+      <h2>待認證（{rows.length}）</h2>
+      <p className="hint" style={{ marginBottom: 12 }}>學生已在校內平台送出認證、並在 TIPS 標記「已送認證」的素材。你確認後，學生端會顯示「認證成功」。請以學校官方平台的實際認證為準——這裡是幫你追蹤與提醒。</p>
+      {rows.length === 0 && <p className="empty-hint">目前沒有待確認的素材 🎉</p>}
+      {rows.map((a) => (
+        <div key={a.artifact_id} className="cert-row">
+          <div className="cert-info">
+            <div className="cert-title">{a.title}</div>
+            <div className="cert-meta">{a.student_name}{a.class_group ? '（' + a.class_group + '）' : ''}・{a.category === 'course_result' ? '課程成果' : '多元表現'}{a.semester ? '・' + a.semester : ''}</div>
+            {a.file_url && <a href={a.file_url} target="_blank" rel="noreferrer" className="cert-file">開啟檔案 →</a>}
+          </div>
+          <button className="btn-sm" disabled={busyId === a.artifact_id} onClick={() => confirm(a)}>
+            {busyId === a.artifact_id ? '確認中…' : '✓ 確認認證成功'}
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function TeacherStudents() {
   const [rows, setRows] = useState(null);
