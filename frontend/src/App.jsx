@@ -1049,9 +1049,31 @@ export default function App() {
   const [tab, setTab] = useState('home');
   const [quickAdd, setQuickAdd] = useState(null); // null | { semester }
   const [editAnchor, setEditAnchor] = useState(false);
+  // 「記住我」自動回登：有存 token 才進入 booting 狀態（v36）
+  const [booting, setBooting] = useState(() => { try { return !!localStorage.getItem('tips_tok'); } catch (e) { return false; } });
+
+  useEffect(() => {
+    let t = null;
+    try { t = localStorage.getItem('tips_tok'); } catch (e) {}
+    if (!t) return;
+    setToken(t);
+    api('me')
+      .then((u) => { setStudent(u); setTab('home'); })
+      .catch(() => { try { localStorage.removeItem('tips_tok'); } catch (e) {} setToken(null); })
+      .finally(() => setBooting(false));
+  }, []);
 
   function goQuickAdd(semester) { setQuickAdd({ semester: semester || null }); setTab('artifacts'); }
 
+  if (booting) {
+    return (
+      <div className="login-wrap">
+        <div className="login-card" style={{ maxWidth: 320, margin: '80px auto', textAlign: 'center' }}>
+          <p className="sub">…</p>
+        </div>
+      </div>
+    );
+  }
   if (!student) return <Login onDone={(u) => { setStudent(u); setTab('home'); }} />;
 
   const isTeacher = student.role === 'teacher';
@@ -1078,7 +1100,7 @@ export default function App() {
           {enUS ? 'TIPS College Prep' : 'TIPS 學習歷程'}<small>{student.name}{isTeacher ? '（老師）' : ''}</small>
         </div>
         {!isTeacher && <button onClick={() => setEditAnchor(true)}>{enUS ? T3('方向', 'Focus', '方向') : '科別／組別'}</button>}
-        <button onClick={() => { setToken(null); setStudent(null); }}>{enUS ? T3('登出', 'Log out', '登出') : '登出'}</button>
+        <button onClick={() => { try { localStorage.removeItem('tips_tok'); } catch (e) {} setToken(null); setStudent(null); }}>{enUS ? T3('登出', 'Log out', '登出') : '登出'}</button>
       </header>
 
       {!showHub && (
@@ -1229,6 +1251,7 @@ function Login({ onDone }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [created, setCreated] = useState(null);
+  const [remember, setRemember] = useState(true);   // 記住我（v36）
   const isUS = APP_MARKET === 'us';
   const lt = (zh, en) => (isUS ? en : zh);
   const TW_CITIES = ['台北市', '新北市', '桃園市', '台中市', '台南市', '高雄市', '基隆市', '新竹市', '新竹縣', '苗栗縣', '彰化縣', '南投縣', '雲林縣', '嘉義市', '嘉義縣', '屏東縣', '宜蘭縣', '花蓮縣', '台東縣', '澎湖縣', '金門縣', '連江縣'];
@@ -1239,6 +1262,9 @@ function Login({ onDone }) {
     try {
       const data = await api('login', { studentId, loginCode });
       setToken(data.token);
+      if (remember && data.student && data.student.role !== 'teacher') {
+        try { localStorage.setItem('tips_tok', data.token); } catch (e2) {}
+      }
       onDone(data.student);
     } catch (er) { setErr(er.message); } finally { setBusy(false); }
   }
@@ -1263,7 +1289,10 @@ function Login({ onDone }) {
     } catch (er) { setErr(er.message); } finally { setBusy(false); }
   }
 
-  function enterApp() { setToken(created.token); onDone(created.student); }
+  function enterApp() {
+    try { localStorage.setItem('tips_tok', created.token); } catch (e) {}
+    setToken(created.token); onDone(created.student);
+  }
 
   // ── 台灣線雙入口選擇畫面（先選高中/技高，再進註冊）──
   if (entry === null) {
@@ -1317,7 +1346,10 @@ function Login({ onDone }) {
             <input id="sid" name="username" value={studentId} onChange={(e) => setStudentId(e.target.value)} placeholder={lt('你的帳號', 'your account')} autoComplete="username" />
             <label htmlFor="code">{lt('密碼', 'Password')}</label>
             <input id="code" name="password" type="password" value={loginCode} onChange={(e) => setLoginCode(e.target.value)} placeholder={lt('你的密碼', 'your password')} autoComplete="current-password" />
-            <div style={{ fontSize: '.72rem', color: '#5a6378', marginTop: 4 }}>{lt('登入後可讓瀏覽器記住帳號密碼，下次自動帶入。', 'Let your browser save these to sign in faster next time.')}</div>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 10, fontSize: '.85rem', cursor: 'pointer' }}>
+              <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} style={{ width: 'auto' }} />
+              <span>{lt('保持登入（共用電腦請取消勾選）', 'Keep me logged in (uncheck on shared computers)')}</span>
+            </label>
             <button className="btn" type="submit" disabled={busy} style={{ marginTop: 12 }}>{busy ? lt('登入中…', 'Signing in…') : lt('登入', 'Log in')}</button>
             {err && <p className="err">{err}</p>}
             <button type="button" className="btn-sm" style={{ marginTop: 14 }} onClick={() => { setErr(''); setMode('signup'); }}>{lt('還沒有帳號？免費註冊 →', 'New here? Sign up free →')}</button>
