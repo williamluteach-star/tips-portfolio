@@ -703,8 +703,11 @@ function CoachPanel({ cols, schoolType }) {
   async function ask() {
     if (!sel.length) { setErr('先從上面點選 1–' + COACH_MAX + ' 個想問的校系。'); return; }
     setBusy(true); setErr(''); setOut('');
+    const targets = sel.map((s) => ({ dept_id: s.dept_id, school: s.school, dept: s.dept, group: s.group, tier: s.tier }));
+    // 同步存回學生檔案：對話教練的參採／去年門檻注入靠這個（存失敗不擋教練）
+    api('saveProfile', { target_majors: JSON.stringify(targets) }).catch(() => {});
     try {
-      const d = await api('coachDirection', { school_type: schoolType, targets: sel.map((s) => ({ dept_id: s.dept_id, school: s.school, dept: s.dept, group: s.group, tier: s.tier })) });
+      const d = await api('coachDirection', { school_type: schoolType, targets });
       setOut((d && d.text) || '');
     } catch (e) { setErr(e.message); }
     setBusy(false);
