@@ -55,6 +55,18 @@ h2 { font-size: 1.05rem; font-weight: 900; margin: 28px 0 12px; }
 .login-card h1 { font-size: 1.7rem; font-weight: 900; line-height: 1.3; margin-bottom: 6px; }
 .login-card p.sub { color: var(--graphite); font-size: 0.9rem; margin-bottom: 28px; }
 
+/* 註冊頁：桌機兩欄橫向，登入入口置頂 */
+.login-card--wide { max-width: 680px; }
+.signup-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.signup-head h1 { margin-bottom: 0; }
+.signup-head .btn-sm { flex-shrink: 0; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 22px; align-items: start; }
+.form-grid .ff > label:first-child { margin-top: 14px; }
+@media (max-width: 640px) {
+  .login-card--wide { max-width: 360px; }
+  .form-grid { grid-template-columns: 1fr; }
+}
+
 /* ---------- 表單 ---------- */
 label { display: block; font-size: 0.82rem; font-weight: 700; margin: 14px 0 6px; }
 input, select, textarea {
@@ -247,7 +259,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .step-cap.warn { color: var(--alert); font-weight: 600; }
 .step-cap.ok { color: #15703c; font-weight: 700; }
 .central-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 700; color: var(--ink); margin: 6px 0 2px; cursor: pointer; }
-.central-toggle input { flex-shrink: 0; }
+.central-toggle input { width: auto; flex-shrink: 0; }
+.central-toggle span { white-space: nowrap; }
 
 /* ---------- 教練區塊補充 ---------- */
 .coach-label { display: block; font-size: 0.8rem; font-weight: 800; color: var(--ink); margin: 12px 0 4px; }
