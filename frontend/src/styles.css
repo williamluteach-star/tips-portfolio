@@ -416,3 +416,31 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
   .sem-cell2 { border-left: none; border-top: 1.5px solid var(--rule); }
   .sem-cell2:first-child { border-top: none; }
 }
+
+/* ---------- 對話教練（v28） ---------- */
+.coach-chat { margin-top: 12px; }
+.chat-log {
+  margin-top: 8px; background: #fff; border: 1.5px solid var(--rule); border-radius: 10px;
+  padding: 10px 12px; max-height: 320px; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.chat-b { max-width: 85%; padding: 8px 12px; border-radius: 12px; font-size: 0.9rem; line-height: 1.55; white-space: pre-wrap; }
+.chat-me { align-self: flex-end; background: var(--ink); color: var(--paper); border-bottom-right-radius: 4px; }
+.chat-coach { align-self: flex-start; background: #f1f3f7; color: var(--ink); border-bottom-left-radius: 4px; }
+.chat-row { display: flex; gap: 8px; margin-top: 8px; align-items: flex-end; }
+.chat-row textarea { flex: 1; border: 1.5px solid var(--rule); border-radius: 10px; padding: 8px 10px; font-family: var(--font-body); font-size: 0.9rem; }
+.chat-row .btn-sm { flex-shrink: 0; margin-bottom: 2px; }
+
+
+/* ---------- AI 預檢（v29 第一關） ---------- */
+.precheck { margin: 8px 0 4px; }
+.precheck-box { background: #fff; border: 1.5px solid var(--rule); border-left-width: 5px; border-radius: 10px; padding: 10px 14px; margin-top: 6px; }
+.precheck-box.light-g { border-left-color: #15703c; }
+.precheck-box.light-y { border-left-color: #b58900; }
+.precheck-box.light-r { border-left-color: #b3261e; }
+.precheck-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+.precheck-light { font-weight: 900; }
+.precheck-box pre { white-space: pre-wrap; font-family: var(--font-body); font-size: 0.88rem; line-height: 1.6; margin: 6px 0 10px; }
+.cert-pre { margin-top: 6px; font-size: 0.85rem; }
+.cert-pre summary { cursor: pointer; font-weight: 700; color: #2a3a5c; }
+.cert-pre pre { white-space: pre-wrap; font-family: var(--font-body); font-size: 0.84rem; line-height: 1.6; background: #f7f7f4; border-radius: 8px; padding: 8px 10px; margin-top: 6px; }
