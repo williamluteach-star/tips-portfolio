@@ -165,6 +165,8 @@
         <button class="lang-btn active" data-lang="en" onclick="setLang('en')">EN</button>
         <button class="lang-btn" data-lang="zh-TW" onclick="setLang('zh-TW')">繁</button>
         <button class="lang-btn" data-lang="zh-CN" onclick="setLang('zh-CN')">简</button>
+        <button class="lang-btn" data-lang="es" onclick="setLang('es')">ES</button>
+        <button class="lang-btn" data-lang="ja" onclick="setLang('ja')">日本語</button>
       </div>
       <a class="nav-login" href="https://portfolio.tips-edu.com/" data-i18n="nav_login">Log in</a>
       <a class="nav-cta" href="https://portfolio.tips-edu.com/" data-i18n="nav_cta">Sign up free</a>
@@ -477,7 +479,137 @@ EN.msg_ok = "You're on the list! We'll email you when early access opens 🎉";
 EN.msg_err = 'Something went wrong — please try again or email williamluteach@gmail.com';
 
 let lang = 'en';
-function dict_() { return lang === 'zh-TW' ? ZH_TW : lang === 'zh-CN' ? ZH_CN : EN; }
+const ES = {
+  brand_sub: "Compañero para la solicitud universitaria",
+  nav_login: "Iniciar sesión",
+  nav_cta: "Regístrate gratis",
+  kicker: "Para estudiantes de secundaria en EE. UU. — especialmente familias inmigrantes · Grados 8–12",
+  hero_sub: "Un compañero bilingüe de cuatro años que ayuda a tu hijo a capturar, reflexionar y organizar cada proyecto, premio y actividad — para que la solicitud del último año cuente una historia específica y auténtica, construida con trabajo real y no reconstruida de memoria. Abierto a cualquier estudiante que aplique a universidades de EE. UU.",
+  hero_cta: "Regístrate gratis — empieza hoy →",
+  hero_note: "Gratis · Sin tarjeta de crédito · Listo en 2 minutos",
+  why_title: "Por qué ahora",
+  why_sub: "Tres cambios en las admisiones de EE. UU. premian a los estudiantes que capturan su historia mientras la viven:",
+  stat1_t: "Lo específico vence a lo genérico",
+  stat1_p: "La revisión holística evalúa los logros en el contexto de la vida de cada estudiante: liderazgo, curiosidad, contribución real. Las historias específicas y detalladas destacan; las listas vagas de actividades se confunden entre sí.",
+  stat2_t: "La IA ya lee las solicitudes",
+  stat2_p: "Caltech, Georgia Tech y Virginia Tech ya usan IA para filtrar ensayos y marcar la escritura genérica y de plantilla. Las historias auténticas y específicas — basadas en trabajo real — sobresalen.",
+  stat3_t: "Los consultores cuestan más de $10,000",
+  stat3_p: "Los paquetes completos de consultoría de admisión cuestan entre $10,000 y $32,000, y gran parte de ese dinero paga las prisas del último año. Nosotros construimos la materia prima durante cuatro años, por una fracción del precio.",
+  how_title: "Cómo funciona",
+  how_sub: "Un espacio privado que tu hijo construye poco a poco — con estructura, recordatorios y un coach de reflexión con IA.",
+  f1_t: "Bóveda de logros",
+  f1_p: "Fotos, PDF, código, ensayos, certificados — capturados en el momento con una reflexión guiada de 60 segundos, organizados automáticamente por semestre y tema.",
+  f2_t: "Puntos de control por semestre",
+  f2_p: "Recordatorios inteligentes para que nada se olvide: revisiones de fin de semestre, fechas límite de programas de verano, convocatorias de premios y los hitos del Common App.",
+  f3_t: "Coach de IA que pregunta primero",
+  f3_p: "Nuestra IA hace preguntas en lugar de escribir por tu hijo — construyendo ensayos auténticos con su propia voz, con transparencia sobre el uso de IA. Exactamente lo que hoy premian las admisiones filtradas por IA.",
+  f4_t: "Bilingüe para los padres",
+  f4_p: "Informes de progreso y guías en chino tradicional/simplificado e inglés, para que los padres siempre sepan cómo van las cosas.",
+  cred_t: "Ya lo hicimos en el sistema de portafolios más estricto del mundo.",
+  cred_p: "TIPS Education ha acompañado a estudiantes en el sistema nacional de portafolios de Taiwán — donde cada estudiante de secundaria debe subir evidencia de cursos y actividades a una base de datos gubernamental cada semestre, y las universidades la revisan para la admisión. Construimos software y coaching que mantiene a los estudiantes al día durante tres años. Ahora traemos esa disciplina a las solicitudes de EE. UU.",
+  cred_hl: "Las herramientas por sí solas no construyen portafolios. Los hábitos sí — y los hábitos necesitan un compañero.",
+  pr_title: "Precios simples y honestos",
+  pr_sub: "Gratis hasta el 31 de julio. Las familias fundadoras aseguran el precio más bajo de por vida.",
+  pr1_t: "Ahora → 31 de julio: Gratis",
+  pr1_p: "Acceso completo, sin tarjeta de crédito. Empieza a capturar hoy.",
+  pr2_t: "Agosto: $9/mes (fundadores)",
+  pr2_p: "Regístrate antes de septiembre y asegura este precio de familia fundadora mientras permanezcas.",
+  pr3_t: "Septiembre: $15/mes",
+  pr3_p: "Precio regular más adelante. Las familias fundadoras nunca lo pagan.",
+  pr_coffee: "Menos que un café a la semana — por los cuatro años que deciden la universidad.",
+  faq_title: "Preguntas de los padres",
+  faq_sub: "Respuestas directas, antes de registrarte.",
+  faq_q1: "¿Es realmente gratis?",
+  faq_a1: "Sí — completamente gratis durante nuestro periodo fundacional, sin tarjeta de crédito. Más adelante añadiremos planes de pago accesibles, y las familias fundadoras conservan un precio preferente. Siempre verás el precio y lo aceptarás antes de cualquier cobro.",
+  faq_q2: "¿La IA escribe los ensayos de mi hijo?",
+  faq_a2: "No. Nuestro coach de IA hace preguntas y ayuda a tu hijo a reflexionar — la escritura mantiene su propia voz, y cualquier asistencia de IA se divulga con transparencia. Las oficinas de admisión ya usan IA para detectar ensayos genéricos, así que la escritura auténtica construida con trabajo real es exactamente lo que se premia.",
+  faq_q3: "¿Garantizan la admisión o llenan la solicitud por nosotros?",
+  faq_a3: "No — y desconfía de quien prometa admisión. No escribimos ni enviamos solicitudes en nombre del estudiante. Lo que hacemos es ayudar a tu hijo a capturar y organizar cuatro años de trabajo real, para que cuando llegue la temporada de solicitudes, la historia sea específica, honesta y esté lista para contarse.",
+  faq_q4: "¿En qué grado conviene empezar?",
+  faq_a4: "Octavo o noveno grado es ideal, porque el punto es capturar el trabajo mientras sucede en lugar de reconstruirlo de memoria. Pero cualquier grado ayuda — incluso empezar en el penúltimo año es mejor que las prisas del verano antes de las fechas límite.",
+  faq_q5: "¿Nuestros datos son privados y de quién son?",
+  faq_a5: "El contenido de tu familia es privado de tu cuenta. Eres dueño de lo que subes, nunca vendemos tus datos y puedes eliminar tu material cuando quieras.",
+  faq_q6: "No somos una familia chino-americana — ¿es para nosotros?",
+  faq_a6: "Sí. TIPS está abierto a cualquier estudiante que aplique a universidades de EE. UU. Lo construimos primero con las familias inmigrantes que mejor conocemos, por eso el apoyo bilingüe y las guías para padres son especialmente fuertes — pero el hábito de capturar y reflexionar durante cuatro años ayuda a cualquier solicitante.",
+  faq_q7: "¿Esto reemplaza al consejero escolar o al consultor privado?",
+  faq_a7: "No — los hace más efectivos. TIPS es la capa de captura y reflexión debajo de todo lo demás. Lleva el registro organizado de cuatro años a quien te ayude a aplicar, y su tiempo se dedicará a la estrategia en lugar de desenterrar lo que tu hijo hizo hace dos años.",
+  cta_t: "¿Listo para empezar? Es gratis.",
+  cta_sub: "Crea la cuenta de tu estudiante en unos dos minutos y empieza a capturar el trabajo real hoy — con un coach de IA que guía, nunca escribe. Sin tarjeta de crédito.",
+  cta_btn: "Regístrate gratis →",
+  cta_login: "¿Ya eres miembro? Inicia sesión",
+  msg_ok: "¡Recibido! Te avisaremos cuando abramos los primeros cupos 🎉",
+  msg_err: "No se pudo enviar — inténtalo de nuevo más tarde o escribe a williamluteach@gmail.com",
+};
+
+const JA = {
+  brand_sub: "大学出願コンパニオン",
+  nav_login: "ログイン",
+  nav_cta: "無料登録",
+  kicker: "米国の中高生のために — 移民ファミリーを第一に設計 · 8〜12年生対象",
+  hero_sub: "プロジェクト・受賞・課外活動を「その場で記録し、振り返り、整理する」4年間のバイリンガル・コンパニオン。最終学年の出願が、記憶からの復元ではなく、実際の取り組みに基づいた具体的で誠実なストーリーになります。米国の大学に出願するすべての学生にご利用いただけます。",
+  hero_cta: "無料登録 — 今日から始める →",
+  hero_note: "無料 · クレジットカード不要 · 設定は2分",
+  why_title: "なぜ今なのか",
+  why_sub: "米国大学入試の3つの変化が、「日々の歩みを記録する学生」を評価するようになっています：",
+  stat1_t: "具体性が凡庸さに勝つ",
+  stat1_p: "ホリスティック審査は、リーダーシップ・好奇心・実際の貢献など、学生一人ひとりの文脈の中で実績を評価します。具体的で詳細なストーリーは際立ち、曖昧な活動リストは埋もれてしまいます。",
+  stat2_t: "AIが出願書類を読む時代",
+  stat2_p: "Caltech、Georgia Tech、Virginia Tech はすでにAIでエッセイを審査し、テンプレート的で凡庸な文章を検出しています。実際の取り組みに根ざした、本物の具体的なストーリーこそが際立ちます。",
+  stat3_t: "コンサルタント費用は1万ドル超",
+  stat3_p: "フルサービスの出願コンサルティングは1万〜3.2万ドル。その大半は最終学年の駆け込み作業に費やされます。私たちは4年間かけて「素材」そのものを積み上げます — はるかに小さな負担で。",
+  how_title: "仕組み",
+  how_sub: "お子様が少しずつ積み上げていくプライベートな空間 — 構造化された記録、リマインダー、そしてAIリフレクション・コーチとともに。",
+  f1_t: "実績ボールト",
+  f1_p: "写真・PDF・コード・エッセイ・証明書 — 60秒のガイド付き振り返りとともにその場で記録し、学期・テーマ別に自動整理します。",
+  f2_t: "学期ごとのチェックポイント",
+  f2_p: "スマートリマインダーが取りこぼしを防ぎます：学期末レビュー、サマープログラムの締切、受賞応募のタイミング、Common App のマイルストーン。",
+  f3_t: "「問いかけ優先」AIコーチ",
+  f3_p: "AIは代筆せず、問いかけます。お子様自身の声でエッセイを育て、AI利用は透明に開示。AI審査時代の入試が評価するのは、まさにこの本物らしさです。",
+  f4_t: "保護者向けバイリンガル対応",
+  f4_p: "進捗レポートとガイドを繁体字/簡体字中国語と英語で提供。保護者はいつでも状況を把握できます。",
+  cred_t: "世界で最も厳格なポートフォリオ制度で実証済み。",
+  cred_p: "TIPS Education は台湾の国家学習ポートフォリオ制度で学生を指導してきました。台湾では全高校生が毎学期、履修と活動の証拠を政府データベースに提出し、大学がそれを入試で審査します。私たちは3年間学生を伴走させるソフトウェアとコーチングを作り上げました。その規律を、米国出願に持ち込みます。",
+  cred_hl: "ツールだけではポートフォリオは築けません。習慣が築きます — そして習慣には伴走者が必要です。",
+  pr_title: "シンプルで誠実な料金",
+  pr_sub: "7月31日まで無料。創設メンバー家族は最低価格を永続的に確保できます。",
+  pr1_t: "現在 → 7月31日：無料",
+  pr1_p: "フルアクセス、クレジットカード不要。今日から記録を始めましょう。",
+  pr2_t: "8月：$9/月（創設メンバー）",
+  pr2_p: "9月までの登録で、継続する限りこの創設メンバー価格を維持できます。",
+  pr3_t: "9月：$15/月",
+  pr3_p: "その後の通常価格です。創設メンバー家族がこの価格を払うことはありません。",
+  pr_coffee: "週にコーヒー1杯以下 — 大学進学を左右する4年間のために。",
+  faq_title: "保護者からよくある質問",
+  faq_sub: "登録前に、率直にお答えします。",
+  faq_q1: "本当に無料ですか？",
+  faq_a1: "はい — 創設期間中は完全無料で、クレジットカードも不要です。今後、手頃な有料プランを追加しますが、創設メンバー家族は早期割引価格を維持できます。課金の前には必ず価格が提示され、同意した場合のみ請求されます。",
+  faq_q2: "AIが子どものエッセイを書くのですか？",
+  faq_a2: "いいえ。AIコーチは問いかけ、振り返りを助けるだけです — 文章はお子様自身の声のままで、AIの利用は透明に開示されます。入試側もAIで凡庸なテンプレート文章を検出する時代、実際の取り組みに基づく本物の文章こそが評価されます。",
+  faq_q3: "合格保証や出願の代行はありますか？",
+  faq_a3: "いいえ — そして合格を約束する業者にはご注意ください。私たちは学生に代わって出願書類を書いたり提出したりしません。私たちがするのは、4年間の実際の取り組みを記録・整理する支援です。出願シーズンが来たとき、ストーリーが具体的で誠実で、語る準備ができているように。",
+  faq_q4: "何年生から始めるのがよいですか？",
+  faq_a4: "8年生か9年生が理想です。記憶から復元するのではなく、起きたその時に記録することに意味があるからです。ただし何年生からでも価値はあります — 11年生からでも、締切直前の夏に慌てるよりずっと良い結果になります。",
+  faq_q5: "データのプライバシーと所有権は？",
+  faq_a5: "ご家族のコンテンツはアカウント内で非公開です。アップロードしたものの所有権はご自身にあり、データを販売することは決してなく、いつでも削除できます。",
+  faq_q6: "中華系の家庭ではないのですが、利用できますか？",
+  faq_a6: "はい。TIPS は米国の大学に出願するすべての学生にご利用いただけます。私たちが最もよく知る移民ファミリーとともに作ったため、バイリンガル対応と保護者向けガイドがとりわけ充実していますが、「4年間の記録と振り返り」の習慣はどんな出願者にも役立ちます。",
+  faq_q7: "スクールカウンセラーや個別コンサルタントの代わりになりますか？",
+  faq_a7: "いいえ — むしろ彼らをより有効にします。TIPS はすべての土台となる「記録と振り返り」のレイヤーです。整理された4年間の記録を出願支援者に持参すれば、その時間は2年前の活動の発掘ではなく、戦略に使われます。",
+  cta_t: "始める準備はできましたか？無料です。",
+  cta_sub: "約2分で学生アカウントを作成し、今日から実際の取り組みを記録しましょう — 導くだけで決して代筆しないAIコーチとともに。クレジットカード不要。",
+  cta_btn: "無料登録 →",
+  cta_login: "すでにメンバーの方はログイン",
+  msg_ok: "受け付けました！先行枠のご案内時にお知らせします 🎉",
+  msg_err: "送信に失敗しました。しばらくして再試行するか williamluteach@gmail.com までご連絡ください",
+};
+
+function dict_(lang) {
+  if (lang === 'zh-TW') return ZH_TW;
+  if (lang === 'zh-CN') return ZH_CN;
+  if (lang === 'es') return ES;
+  if (lang === 'ja') return JA;
+  return EN;
+}
 function setLang(code) {
   lang = code;
   const dict = dict_();
