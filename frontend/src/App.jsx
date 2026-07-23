@@ -1622,6 +1622,72 @@ function ArtifactCoach({ artifact, summary, onSummaryChange }) {
         </div>
       )}
       {err && <p className="err">{err}</p>}
+
+      {/* 4) 對話教練（多輪） */}
+      <CoachChat artifact={artifact} />
+    </div>
+  );
+}
+
+/** 對話教練：跟教練就這件素材多輪對話（v28 MVP，觀察期不設次數上限） */
+function CoachChat({ artifact }) {
+  const [open, setOpen] = useState(false);
+  const [msgs, setMsgs] = useState(null);       // null = 尚未載入歷史
+  const [input, setInput] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [disclosure, setDisclosure] = useState('');
+
+  function toggle() {
+    const o = !open;
+    setOpen(o);
+    if (o && msgs === null) {
+      api('aiChat', { artifact_id: artifact.artifact_id, load: true })
+        .then((d) => setMsgs(d.history || []))
+        .catch(() => setMsgs([]));
+    }
+  }
+  async function send() {
+    const text = input.trim();
+    if (!text || busy) return;
+    setBusy(true); setErr(''); setInput('');
+    setMsgs((m) => (m || []).concat([{ role: 's', text }]));
+    try {
+      const d = await api('aiChat', { artifact_id: artifact.artifact_id, message: text });
+      setMsgs(d.history || []);
+      if (d.disclosure) setDisclosure(d.disclosure);
+    } catch (e) { setErr(e.message); }
+    finally { setBusy(false); }
+  }
+  function onKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+  }
+
+  return (
+    <div className="coach-chat">
+      <button className="btn-sm" onClick={toggle}>💬 跟教練聊聊{open ? '（收起）' : ''}</button>
+      {open && (
+        <>
+          <div className="chat-log">
+            {(!msgs || msgs.length === 0) && (
+              <p className="empty-hint" style={{ padding: '8px 0' }}>
+                {msgs === null ? '載入中…' : '把上面反思問題的想法打在這裡，教練會陪你把它想得更深。教練只引導、不代寫。'}
+              </p>
+            )}
+            {msgs && msgs.map((m, i) => (
+              <div key={i} className={'chat-b ' + (m.role === 's' ? 'chat-me' : 'chat-coach')}>{m.text}</div>
+            ))}
+            {busy && <div className="chat-b chat-coach">教練思考中…</div>}
+          </div>
+          <div className="chat-row">
+            <textarea rows="2" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={onKey}
+              placeholder="打字跟教練聊（Enter 送出、Shift+Enter 換行）…" />
+            <button className="btn-sm" disabled={busy || !input.trim()} onClick={send}>送出</button>
+          </div>
+          {err && <p className="err">{err}</p>}
+          {disclosure && <p className="hint" style={{ whiteSpace: 'pre-wrap' }}>{disclosure}</p>}
+        </>
+      )}
     </div>
   );
 }
@@ -1688,12 +1754,26 @@ function ArtifactPack({ artifact, summary, onSummaryChange, onChanged }) {
   const [checked, setChecked] = useState(!!artifact.is_checked_to_central && artifact.is_checked_to_central !== 'false');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
+  const [pre, setPre] = useState(null);        // AI 預檢結果 {light, text, cached}
+  const [preBusy, setPreBusy] = useState(false);
+  const [preOpen, setPreOpen] = useState(false);
 
   async function save(patch, okMsg) {
     setBusy(true); setMsg('');
     try { await api('updateArtifact', { artifact_id: artifact.artifact_id, ...patch }); setMsg(okMsg); onChanged && onChanged(); }
     catch (e) { setMsg(e.message); }
     finally { setBusy(false); }
+  }
+
+  // 第一關：AI 預檢（按「已送認證」自動觸發；內容沒改回快取 0 token）
+  async function runPrecheck() {
+    if (preBusy) return;
+    setPreBusy(true); setPreOpen(true);
+    try {
+      const d = await api('aiPrecheck', { artifact_id: artifact.artifact_id });
+      setPre(d);
+    } catch (e) { setPre({ light: '', text: '預檢暫時無法使用：' + e.message }); }
+    finally { setPreBusy(false); }
   }
 
   const isCourse = artifact.category === 'course_result';
@@ -1713,7 +1793,7 @@ function ArtifactPack({ artifact, summary, onSummaryChange, onChanged }) {
           return (
             <button key={st.val || 'none'} type="button" className={cls} disabled={!clickable}
               title={st.short}
-              onClick={() => { if (clickable) { setStatus(st.val); save({ is_uploaded_to_school: st.val }, '狀態已更新'); } }}>
+              onClick={() => { if (clickable) { setStatus(st.val); save({ is_uploaded_to_school: st.val }, '狀態已更新'); if (st.val === 'submitted') runPrecheck(); } }}>
               <span className="step-dot">{dot}</span>
               <span className="step-label">{st.label}</span>
             </button>
@@ -1724,6 +1804,26 @@ function ArtifactPack({ artifact, summary, onSummaryChange, onChanged }) {
       {status === 'editing' && <p className="step-cap warn">⚠️ 別停在「編輯中」！到校內平台按「送出認證」後，回來點「已送認證」。</p>}
       {status === 'submitted' && <p className="step-cap">✅ 已送出，等<b>老師在系統確認</b>後會自動變成「認證成功」。</p>}
       {status === 'certified' && <p className="step-cap ok">🎉 老師已確認「認證成功」！</p>}
+
+      {/* 第一關：AI 預檢（教練給燈號與建議；認證仍由老師決定） */}
+      {(status === 'submitted' || preOpen) && (
+        <div className="precheck">
+          {!pre && !preBusy && (
+            <button className="btn-sm" onClick={runPrecheck}>🔍 教練預檢報告</button>
+          )}
+          {preBusy && <p className="empty-hint">教練預檢中…（約 20–40 秒，內容沒改過會直接回上次結果）</p>}
+          {pre && (
+            <div className={'precheck-box light-' + (pre.light === '綠' ? 'g' : pre.light === '紅' ? 'r' : 'y')}>
+              <div className="precheck-head">
+                <span className="precheck-light">{pre.light === '綠' ? '🟢 綠燈' : pre.light === '紅' ? '🔴 紅燈' : '🟡 黃燈'}</span>
+                <span className="hint">預檢是送出前的建議，認證由老師決定</span>
+              </div>
+              <pre>{String(pre.text).replace(/^燈號[：:][^\n]*\n*/, '')}</pre>
+              <button className="btn-sm" disabled={preBusy} onClick={async () => { setPreBusy(true); try { const d = await api('aiPrecheck', { artifact_id: artifact.artifact_id, force: true }); setPre(d); } catch (e) {} finally { setPreBusy(false); } }}>↻ 內容改過了，重新預檢</button>
+            </div>
+          )}
+        </div>
+      )}
 
       <label className="central-toggle" title="是否已在校內平台把這件勾選送進中央資料庫（每學年課程成果 6 件、多元 10 件上限）">
         <input type="checkbox" checked={checked} disabled={busy}
@@ -2036,9 +2136,18 @@ function TeacherCerts() {
       {rows.map((a) => (
         <div key={a.artifact_id} className="cert-row">
           <div className="cert-info">
-            <div className="cert-title">{a.title}</div>
+            <div className="cert-title">
+              {a.precheck_light && <span title="AI 預檢燈號（僅供參考，認證由你決定）">{a.precheck_light === '綠' ? '🟢' : a.precheck_light === '紅' ? '🔴' : '🟡'} </span>}
+              {a.title}
+            </div>
             <div className="cert-meta">{a.student_name}{a.class_group ? '（' + a.class_group + '）' : ''}・{a.category === 'course_result' ? '課程成果' : '多元表現'}{a.semester ? '・' + a.semester : ''}</div>
             {a.file_url && <a href={a.file_url} target="_blank" rel="noreferrer" className="cert-file">開啟檔案 →</a>}
+            {a.precheck_text && (
+              <details className="cert-pre">
+                <summary>AI 預檢摘要（第一關參考）</summary>
+                <pre>{String(a.precheck_text).replace(/^燈號[：:][^\n]*\n*/, '')}</pre>
+              </details>
+            )}
           </div>
           <button className="btn-sm" disabled={busyId === a.artifact_id} onClick={() => confirm(a)}>
             {busyId === a.artifact_id ? '確認中…' : '✓ 確認認證成功'}
