@@ -14,7 +14,7 @@
   --alert: #c93a2e;
   --rule: #e3e1da;
   --radius: 10px;
-  --font-body: 'Noto Sans TC', system-ui, sans-serif;
+  --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
   --font-mono: 'IBM Plex Mono', monospace;
 }
 
