@@ -2,7 +2,7 @@
 export const API_URL = 'https://script.google.com/macros/s/AKfycbyQBIQCqtfJL0SjwBlwAsFKfHzIaAUWk5hAZ5w_hOEd65pDpcOqpNsYjAbv5NfRwExA/exec';
 
 let token = null;
-export function setToken(t) { token = t; }
+export function setToken(t) { token = t; window.__tok = t;}
 export function getToken() { return token; }
 
 /**
