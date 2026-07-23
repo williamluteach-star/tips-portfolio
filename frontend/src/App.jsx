@@ -740,6 +740,7 @@ const TIER_HINT = {
   dream: '分數離門檻還有段距離 —— 當目標、衝衝看，但別只填這一區。',
   prep:  '分數就落在門檻邊緣 —— 準備充分很有機會，這是你的主力區。',
   safe:  '分數穩穩過第一階 —— 適合放進穩定名單，先保住基本盤。',
+  checkOnly: '這些系一階只設檢定門檻、不辦倍率篩選（多為青儲組等小名額）—— 你檢定過了就直接進二階，重點放在備審與面試。',
 };
 function TierBand({ col, renderItem }) {
   const [open, setOpen] = useState(true);
@@ -798,7 +799,9 @@ function Placement({ student }) {
     { key: 'dream', label: '夢幻', sub: '一階偏難', bg: '#f6d9df', color: '#8e1f34', list: res.dream || [] },
     { key: 'prep', label: '適中', sub: '一階邊緣', bg: '#fce9c8', color: '#b06f00', list: res.prep || [] },
     { key: 'safe', label: '安全', sub: '穩過一階', bg: '#d7efe0', color: '#15703c', list: res.safe || [] },
-  ] : [];
+  ].concat(res.checkOnly && res.checkOnly.length ? [
+    { key: 'checkOnly', label: '檢定即過', sub: '僅檢定・無倍率篩選', bg: '#dce8f7', color: '#1c4d8f', list: res.checkOnly },
+  ] : []) : [];
   const [q, setQ] = useState('');
   const qq = q.trim();
   const fcols = qq ? cols.map((c) => Object.assign({}, c, { list: c.list.filter((m) => ((m.school || '') + (m.dept || '') + (m.cluster || '') + (m.group || '')).indexOf(qq) >= 0) })) : cols;
@@ -861,6 +864,11 @@ function Placement({ student }) {
                     ✕ 檢定未過：{m.checkFail.join('、')}
                     <div style={{ fontWeight: 400, fontSize: '.74rem', color: '#5a6378', marginTop: 2 }}>檢定沒過就無法進入倍率篩選，需先拉高該科。</div>
                   </div>
+                ) : m.minMargin == null ? (
+                  <div style={{ fontSize: '.84rem', marginTop: 4, color: '#1c4d8f', fontWeight: 700 }}>
+                    ✓ 通過檢定即過一階（本系不辦倍率篩選）
+                    <div style={{ fontWeight: 400, fontSize: '.74rem', color: '#5a6378', marginTop: 2 }}>名額通常很少，勝負在第二階段的備審與面試。</div>
+                  </div>
                 ) : (
                   <div style={{ fontSize: '.84rem', marginTop: 4 }}>
                     最吃緊關卡：<b>{m.binding || '—'}</b>
@@ -890,7 +898,7 @@ function Placement({ student }) {
       {res && (
         <p style={{ fontSize: '.76rem', color: '#5a6378', marginTop: 14 }}>
           {res.note}<br />{res.source}<br />
-          註：音樂／美術／體育等<b>術科校系</b>以術科成績篩選，不適用學測級分推估，未列入本結果。部分校系去年未觸發篩選（人人過一階），亦不會出現在此。
+          註：音樂／美術／體育等<b>術科校系</b>以術科成績篩選，不適用學測級分推估，未列入本結果。一階僅設檢定、不辦倍率篩選的校系（多為青儲組）列在「檢定即過」區。
         </p>
       )}
     </div>
