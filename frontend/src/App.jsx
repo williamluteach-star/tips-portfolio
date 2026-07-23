@@ -153,6 +153,8 @@ function CollegeMatch({ student, lang }) {
   const [focus, setFocus] = useState(initFocus);
   const [results, setResults] = useState(null);
   const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);
+  const [noMore, setNoMore] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [saved, setSaved] = useState([]);
@@ -169,11 +171,23 @@ function CollegeMatch({ student, lang }) {
   ];
 
   async function doSearch() {
-    setBusy(true); setErr('');
+    setBusy(true); setErr(''); setPage(0); setNoMore(false);
     try {
       const d = await api('collegeSearch', { q, state: stt, selectivity: sel, size, focus });
       setResults(d.results || []); setTotal(d.total || 0);
     } catch (e) { setErr(e.message); setResults([]); }
+    setBusy(false);
+  }
+  async function loadMore() {
+    setBusy(true); setErr('');
+    try {
+      const next = page + 1;
+      const d = await api('collegeSearch', { q, state: stt, selectivity: sel, size, focus, page: next });
+      const seen = new Set((results || []).map((r) => String(r['id'])));
+      const fresh = (d.results || []).filter((r) => !seen.has(String(r['id'])));
+      if (fresh.length === 0) { setNoMore(true); } // 後端還不支援分頁或已無更多：收起按鈕，不重複顯示
+      else { setResults((results || []).concat(fresh)); setPage(next); if (d.total) setTotal(d.total); }
+    } catch (e) { setErr(e.message); }
     setBusy(false);
   }
   async function toggleSave(c) {
@@ -269,6 +283,11 @@ function CollegeMatch({ student, lang }) {
 
       {results && results.length === 0 && !busy && <p style={{ color: '#5a6378' }}>{L('沒有符合的學校，放寬條件試試。', 'No matches — try loosening the filters.')}</p>}
       {results && results.length > 0 && <p style={{ color: '#5a6378', fontSize: '.82rem' }}>{L('約 ', '~')}{total.toLocaleString()}{L(' 所符合，依焦點排序顯示前 ', ' matches · showing top ')}{results.length}{L(' 所。', ' by focus.')}</p>}
+      {results && results.length > 0 && results.length < total && !noMore && (
+        <button className="tier-more-btn" onClick={loadMore} disabled={busy}>
+          {busy ? L('載入中…', 'Loading…') : L('載入更多 ↓', 'Load more ↓')}
+        </button>
+      )}
 
       <details style={{ marginTop: 16, background: '#fff', border: '1.5px solid #d9d9d2', borderRadius: 12, padding: '0 14px' }}>
         <summary style={{ fontWeight: 800, padding: '12px 0', cursor: 'pointer' }}>{L('早申請與送分 101（點開）', 'Early apps & testing 101 (tap)')}</summary>
@@ -1276,7 +1295,7 @@ function Login({ onDone }) {
 
   return (
     <div className="login-wrap">
-      <div className="login-card">
+      <div className={'login-card' + (mode === 'signup' ? ' login-card--wide' : '')}>
         {!isUS && (
           <button className="btn-sm" style={{ marginBottom: 10 }} onClick={() => { setErr(''); setEntry(null); }}>← 返回選擇入口</button>
         )}
@@ -1304,37 +1323,58 @@ function Login({ onDone }) {
 
         {mode === 'signup' && (
           <form onSubmit={signup} autoComplete="on">
-            <h1>{lt('學生免費註冊', 'Sign up free 👋')}</h1>
+            <div className="signup-head">
+              <h1>{lt('學生免費註冊 👋', 'Sign up free 👋')}</h1>
+              <button type="button" className="btn-sm" onClick={() => { setErr(''); setMode('login'); }}>{lt('已有帳號？直接登入 →', 'Have an account? Log in →')}</button>
+            </div>
             <p className="sub">{lt('建立帳號，開始把作品一路存下來。免費、免信用卡。', 'Create your account and capture the real work over four years. No credit card.')}</p>
-            <label htmlFor="su-name">{lt('學生姓名', 'Student’s name')}</label>
-            <input id="su-name" name="name" value={name} onChange={(e) => setName(e.target.value)} placeholder={lt('例：陳小明', 'e.g. Maya Chen')} autoComplete="name" />
-            <label htmlFor="su-acct">{lt('設定帳號', 'Choose an account')}</label>
-            <input id="su-acct" name="new-username" value={account} onChange={(e) => setAccount(e.target.value)} placeholder={lt('4–20 碼英數（登入用）', '4–20 letters/digits (for login)')} autoComplete="username" />
-            <div style={{ fontSize: '.72rem', color: '#5a6378', marginTop: 4, lineHeight: 1.5 }}>{lt('帳號規則：4–20 碼，限英文字母、數字、點（.）或底線（_）；這就是你之後登入用的帳號，請自己設定並記牢。', 'Account rules: 4–20 characters — letters, digits, dot (.) or underscore (_). This is the account you’ll log in with, so choose it yourself and keep it.')}</div>
-            <label htmlFor="su-pw">{lt('設定密碼', 'Choose a password')}</label>
-            <input id="su-pw" name="new-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={lt('至少 6 碼', 'at least 6 characters')} autoComplete="new-password" />
-            <div style={{ fontSize: '.72rem', color: '#5a6378', marginTop: 4, lineHeight: 1.5 }}>{lt('密碼規則：至少 6 碼，由你自己設定；登入時可讓瀏覽器記住，下次自動帶入。忘記時可請老師或客服協助查詢。', 'Password rules: at least 6 characters, set by you. Your browser can remember it for next time; if you forget it, a teacher or support can help you retrieve it.')}</div>
-            <label htmlFor="su-email">{lt('Email（家長或學生）', 'Parent or student email')}</label>
-            <input id="su-email" name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" autoComplete="email" />
-            {!isUS && (
-              <>
-                <label htmlFor="su-phone">聯絡電話</label>
-                <input id="su-phone" name="tel" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="09xx-xxx-xxx" autoComplete="tel" />
-                <label htmlFor="su-school">就讀學校（選填）</label>
-                <input id="su-school" value={schoolName} onChange={(e) => setSchoolName(e.target.value)} placeholder={entry === 'vt' ? '例：台中高工' : '例：台中一中'} autoComplete="organization" />
-                <label htmlFor="su-city">縣市（選填）</label>
-                <select id="su-city" value={city} onChange={(e) => setCity(e.target.value)}>
-                  <option value="">請選擇…</option>
-                  {TW_CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            <div className="form-grid">
+              <div className="ff">
+                <label htmlFor="su-name">{lt('學生姓名', 'Student’s name')}</label>
+                <input id="su-name" name="name" value={name} onChange={(e) => setName(e.target.value)} placeholder={lt('例：陳小明', 'e.g. Maya Chen')} autoComplete="name" />
+              </div>
+              <div className="ff">
+                <label htmlFor="su-email">{lt('Email（家長或學生）', 'Parent or student email')}</label>
+                <input id="su-email" name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" autoComplete="email" />
+              </div>
+              <div className="ff">
+                <label htmlFor="su-acct">{lt('設定帳號', 'Choose an account')}</label>
+                <input id="su-acct" name="new-username" value={account} onChange={(e) => setAccount(e.target.value)} placeholder={lt('4–20 碼英數（登入用）', '4–20 letters/digits (for login)')} autoComplete="username" />
+                <div style={{ fontSize: '.72rem', color: '#5a6378', marginTop: 4, lineHeight: 1.5 }}>{lt('帳號規則：4–20 碼，限英文字母、數字、點（.）或底線（_）；這就是你之後登入用的帳號，請自己設定並記牢。', 'Account rules: 4–20 characters — letters, digits, dot (.) or underscore (_). This is the account you’ll log in with, so choose it yourself and keep it.')}</div>
+              </div>
+              <div className="ff">
+                <label htmlFor="su-pw">{lt('設定密碼', 'Choose a password')}</label>
+                <input id="su-pw" name="new-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={lt('至少 6 碼', 'at least 6 characters')} autoComplete="new-password" />
+                <div style={{ fontSize: '.72rem', color: '#5a6378', marginTop: 4, lineHeight: 1.5 }}>{lt('密碼規則：至少 6 碼，由你自己設定；登入時可讓瀏覽器記住，下次自動帶入。忘記時可請老師或客服協助查詢。', 'Password rules: at least 6 characters, set by you. Your browser can remember it for next time; if you forget it, a teacher or support can help you retrieve it.')}</div>
+              </div>
+              {!isUS && (
+                <>
+                  <div className="ff">
+                    <label htmlFor="su-phone">聯絡電話</label>
+                    <input id="su-phone" name="tel" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="09xx-xxx-xxx" autoComplete="tel" />
+                  </div>
+                  <div className="ff">
+                    <label htmlFor="su-school">就讀學校（選填）</label>
+                    <input id="su-school" value={schoolName} onChange={(e) => setSchoolName(e.target.value)} placeholder={entry === 'vt' ? '例：台中高工' : '例：台中一中'} autoComplete="organization" />
+                  </div>
+                  <div className="ff">
+                    <label htmlFor="su-city">縣市（選填）</label>
+                    <select id="su-city" value={city} onChange={(e) => setCity(e.target.value)}>
+                      <option value="">請選擇…</option>
+                      {TW_CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                </>
+              )}
+              <div className="ff">
+                <label htmlFor="su-grade">{lt('目前年級', 'Current grade')}</label>
+                <select id="su-grade" value={grade} onChange={(e) => setGrade(e.target.value)}>
+                  {isUS
+                    ? ['9', '10', '11', '12'].map((g) => <option key={g} value={g}>{'Grade ' + g}</option>)
+                    : ['10', '11', '12'].map((g) => <option key={g} value={g}>{'高' + (g === '10' ? '一' : g === '11' ? '二' : '三') + '（' + g + '）'}</option>)}
                 </select>
-              </>
-            )}
-            <label htmlFor="su-grade">{lt('目前年級', 'Current grade')}</label>
-            <select id="su-grade" value={grade} onChange={(e) => setGrade(e.target.value)}>
-              {isUS
-                ? ['9', '10', '11', '12'].map((g) => <option key={g} value={g}>{'Grade ' + g}</option>)
-                : ['10', '11', '12'].map((g) => <option key={g} value={g}>{'高' + (g === '10' ? '一' : g === '11' ? '二' : '三') + '（' + g + '）'}</option>)}
-            </select>
+              </div>
+            </div>
             {!isUS && (
               <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 12, fontSize: '.78rem', color: '#5a6378', lineHeight: 1.55 }}>
                 <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} style={{ marginTop: 3, width: 'auto' }} />
@@ -1343,7 +1383,6 @@ function Login({ onDone }) {
             )}
             <button className="btn" type="submit" style={{ marginTop: 14 }} disabled={busy}>{busy ? lt('建立中…', 'Creating…') : lt('免費建立帳號', 'Create free account')}</button>
             {err && <p className="err">{err}</p>}
-            <button type="button" className="btn-sm" style={{ marginTop: 14 }} onClick={() => { setErr(''); setMode('login'); }}>{lt('已有帳號，請登入 →', '← Already have an account? Log in')}</button>
           </form>
         )}
 
@@ -1523,10 +1562,9 @@ function QuotaBar({ bySemester, schoolType }) {
 
 /* ============ AI 反思教練（Phase 2） ============ */
 
-function ArtifactCoach({ artifact }) {
+function ArtifactCoach({ artifact, summary, onSummaryChange }) {
   const [reflectOut, setReflectOut] = useState('');
   const [sumOut, setSumOut] = useState('');
-  const [draft, setDraft] = useState(artifact.summary_100 || '');
   const [busy, setBusy] = useState('');        // '' | 'reflect' | 'summary'
   const [err, setErr] = useState('');
   const [remaining, setRemaining] = useState(null);
@@ -1538,11 +1576,11 @@ function ArtifactCoach({ artifact }) {
     finally { setBusy(''); }
   }
   async function checkSummary() {
-    if (!draft.trim()) { setErr('先寫下你的簡述草稿（幾句話就好），教練才能給建議。'); return; }
+    if (!summary.trim()) { setErr('先寫下你的簡述草稿（幾句話就好），教練才能給建議。'); return; }
     setBusy('summary'); setErr('');
     try {
-      try { await api('updateArtifact', { artifact_id: artifact.artifact_id, summary_100: draft }); } catch (e) { /* 存簡述失敗不擋健檢 */ }
-      const d = await api('aiSummary', { artifact_id: artifact.artifact_id, draft });
+      try { await api('updateArtifact', { artifact_id: artifact.artifact_id, summary_100: summary }); } catch (e) { /* 存簡述失敗不擋健檢 */ }
+      const d = await api('aiSummary', { artifact_id: artifact.artifact_id, draft: summary });
       setSumOut(d.text);
       if (typeof d.remaining === 'number') setRemaining(d.remaining);
     } catch (e) { setErr(e.message); }
@@ -1564,14 +1602,14 @@ function ArtifactCoach({ artifact }) {
         </div>
       )}
 
-      {/* 2) 100 字簡述 */}
-      <label className="coach-label">你的 100 字簡述</label>
-      <textarea className="coach-ta" rows="3" value={draft} onChange={(e) => setDraft(e.target.value)}
+      {/* 2) 100 字簡述（與上傳包共用同一份，改這裡那邊也會同步） */}
+      <label className="coach-label">你的 100 字簡述（{summary.length}/100 字）</label>
+      <textarea className="coach-ta" rows="3" value={summary} onChange={(e) => onSummaryChange(e.target.value)}
         placeholder="寫下你的 100 字簡述草稿（幾句話就好）…" />
 
       {/* 3) 簡述健檢——在 100 字下方 */}
       <div className="coach-sum-row">
-        <button className="btn-sm" disabled={!!busy || !draft.trim()} onClick={checkSummary}>
+        <button className="btn-sm" disabled={!!busy || !summary.trim()} onClick={checkSummary}>
           ✍️ 送給教練檢查{remaining !== null ? `（本件剩 ${remaining} 次）` : ''}
         </button>
         <span className="coach-quota">每件最多 3 次・同段沒改不重算</span>
@@ -1605,7 +1643,7 @@ function SynthesisCoach() {
   return (
     <div className="coach coach-syn">
       <button className="btn-ghost" onClick={() => setOpen(!open)}>
-        🎓 綜整心得教練{open ? '（收起）' : ''}
+         🎓 綜整心得教練{open ? '（收起）' : ''}
       </button>
       {open && (
         <div className="coach-draft">
@@ -1644,9 +1682,8 @@ const STEP_DEFS = [
 ];
 const STEP_IDX = { '': 0, editing: 1, submitted: 2, certified: 3 };
 
-function ArtifactPack({ artifact, onChanged }) {
+function ArtifactPack({ artifact, summary, onSummaryChange, onChanged }) {
   const [open, setOpen] = useState(false);
-  const [summary, setSummary] = useState(artifact.summary_100 || '');
   const [status, setStatus] = useState(artifact.is_uploaded_to_school || '');
   const [checked, setChecked] = useState(!!artifact.is_checked_to_central && artifact.is_checked_to_central !== 'false');
   const [busy, setBusy] = useState(false);
@@ -1700,9 +1737,9 @@ function ArtifactPack({ artifact, onChanged }) {
           <p><b>步驟 1・檔案</b>：{artifact.file_url
             ? <><a href={artifact.file_url} target="_blank" rel="noreferrer">開啟檔案</a>（下載後上傳到校內平台，已符合 4MB 規格）</>
             : '這件還沒有附件——可以先補上傳，或直接在校內平台貼文字。'}</p>
-          <p style={{ marginBottom: 4 }}><b>步驟 2・100 字簡述</b>（{summary.length}/100 字）：</p>
-          <textarea rows="3" value={summary} onChange={(e) => setSummary(e.target.value)}
-            placeholder="還沒寫？先按上面的「百字簡述健檢」讓教練幫你。" />
+          <p style={{ marginBottom: 4 }}><b>步驟 2・100 字簡述</b>（{summary.length}/100 字・與下方教練區同一份）：</p>
+          <textarea rows="3" value={summary} onChange={(e) => onSummaryChange(e.target.value)}
+            placeholder="還沒寫？先到下方教練區寫草稿、給教練健檢。" />
           <div className="coach-btns">
             <button className="btn-sm" disabled={busy} onClick={() => save({ summary_100: summary }, '簡述已儲存')}>儲存簡述</button>
             <button className="btn-sm" disabled={!summary} onClick={() => { navigator.clipboard.writeText(summary); setMsg('已複製，去校內平台貼上！'); }}>複製簡述</button>
@@ -1718,6 +1755,18 @@ function ArtifactPack({ artifact, onChanged }) {
 }
 
 /* ============ 素材倉庫 ============ */
+
+/** 每件素材的工作區：summary_100 單一來源，上傳包與教練區共用（v27 合併技術債） */
+function ArtifactWork({ artifact }) {
+  const [summary, setSummary] = useState(artifact.summary_100 || '');
+  useEffect(() => { setSummary(artifact.summary_100 || ''); }, [artifact.artifact_id]);
+  return (
+    <>
+      <ArtifactPack artifact={artifact} summary={summary} onSummaryChange={setSummary} />
+      <ArtifactCoach artifact={artifact} summary={summary} onSummaryChange={setSummary} />
+    </>
+  );
+}
 
 function Artifacts({ student, autoOpen, onAutoOpenDone }) {
   const [list, setList] = useState(null);
@@ -1764,8 +1813,7 @@ function Artifacts({ student, autoOpen, onAutoOpenDone }) {
           <div className="a-meta">{a.semester}｜{a.subcategory}{a.subject_or_event ? `｜${a.subject_or_event}` : ''}</div>
           {a.quick_note && <p className="a-note">{a.quick_note}</p>}
           {a.file_url && <p className="a-note"><a href={a.file_url} target="_blank" rel="noreferrer">查看檔案</a>{a.file_size_mb ? `（${a.file_size_mb}MB）` : ''}</p>}
-          <ArtifactPack artifact={a} />
-          <ArtifactCoach artifact={a} />
+          <ArtifactWork artifact={a} />
           <button className="a-del" onClick={() => remove(a.artifact_id)}>刪除</button>
         </article>
       ))}
@@ -2210,7 +2258,7 @@ function TeacherReminders() {
       {msg && <p className="ok-msg">{msg}</p>}
       {err && <p className="err">{err}</p>}
       <p className="hint" style={{ marginTop: 24 }}>
-        📊 LINE 免費額度：每月 200 則（50 人 × 4 次）。補發也會計入，請留意次數。
+         📊 LINE 免費額度：每月 200 則（50 人 × 4 次）。補發也會計入，請留意次數。
       </p>
     </>
   );
