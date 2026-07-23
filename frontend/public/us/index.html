@@ -603,11 +603,12 @@ const JA = {
   msg_err: "送信に失敗しました。しばらくして再試行するか williamluteach@gmail.com までご連絡ください",
 };
 
-function dict_(lang) {
-  if (lang === 'zh-TW') return ZH_TW;
-  if (lang === 'zh-CN') return ZH_CN;
-  if (lang === 'es') return ES;
-  if (lang === 'ja') return JA;
+function dict_(l) {
+  const c = l || (typeof lang !== 'undefined' ? lang : 'en');
+  if (c === 'zh-TW') return ZH_TW;
+  if (c === 'zh-CN') return ZH_CN;
+  if (c === 'es') return ES;
+  if (c === 'ja') return JA;
   return EN;
 }
 function setLang(code) {
