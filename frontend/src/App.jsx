@@ -153,8 +153,6 @@ function CollegeMatch({ student, lang }) {
   const [focus, setFocus] = useState(initFocus);
   const [results, setResults] = useState(null);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(0);
-  const [noMore, setNoMore] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [saved, setSaved] = useState([]);
@@ -171,23 +169,11 @@ function CollegeMatch({ student, lang }) {
   ];
 
   async function doSearch() {
-    setBusy(true); setErr(''); setPage(0); setNoMore(false);
+    setBusy(true); setErr('');
     try {
       const d = await api('collegeSearch', { q, state: stt, selectivity: sel, size, focus });
       setResults(d.results || []); setTotal(d.total || 0);
     } catch (e) { setErr(e.message); setResults([]); }
-    setBusy(false);
-  }
-  async function loadMore() {
-    setBusy(true); setErr('');
-    try {
-      const next = page + 1;
-      const d = await api('collegeSearch', { q, state: stt, selectivity: sel, size, focus, page: next });
-      const seen = new Set((results || []).map((r) => String(r['id'])));
-      const fresh = (d.results || []).filter((r) => !seen.has(String(r['id'])));
-      if (fresh.length === 0) { setNoMore(true); } // 後端還不支援分頁或已無更多：收起按鈕，不重複顯示
-      else { setResults((results || []).concat(fresh)); setPage(next); if (d.total) setTotal(d.total); }
-    } catch (e) { setErr(e.message); }
     setBusy(false);
   }
   async function toggleSave(c) {
@@ -283,11 +269,6 @@ function CollegeMatch({ student, lang }) {
 
       {results && results.length === 0 && !busy && <p style={{ color: '#5a6378' }}>{L('沒有符合的學校，放寬條件試試。', 'No matches — try loosening the filters.')}</p>}
       {results && results.length > 0 && <p style={{ color: '#5a6378', fontSize: '.82rem' }}>{L('約 ', '~')}{total.toLocaleString()}{L(' 所符合，依焦點排序顯示前 ', ' matches · showing top ')}{results.length}{L(' 所。', ' by focus.')}</p>}
-      {results && results.length > 0 && results.length < total && !noMore && (
-        <button className="tier-more-btn" onClick={loadMore} disabled={busy}>
-          {busy ? L('載入中…', 'Loading…') : L('載入更多 ↓', 'Load more ↓')}
-        </button>
-      )}
 
       <details style={{ marginTop: 16, background: '#fff', border: '1.5px solid #d9d9d2', borderRadius: 12, padding: '0 14px' }}>
         <summary style={{ fontWeight: 800, padding: '12px 0', cursor: 'pointer' }}>{L('早申請與送分 101（點開）', 'Early apps & testing 101 (tap)')}</summary>
@@ -703,11 +684,8 @@ function CoachPanel({ cols, schoolType }) {
   async function ask() {
     if (!sel.length) { setErr('先從上面點選 1–' + COACH_MAX + ' 個想問的校系。'); return; }
     setBusy(true); setErr(''); setOut('');
-    const targets = sel.map((s) => ({ dept_id: s.dept_id, school: s.school, dept: s.dept, group: s.group, tier: s.tier }));
-    // 同步存回學生檔案：對話教練的參採／去年門檻注入靠這個（存失敗不擋教練）
-    api('saveProfile', { target_majors: JSON.stringify(targets) }).catch(() => {});
     try {
-      const d = await api('coachDirection', { school_type: schoolType, targets });
+      const d = await api('coachDirection', { school_type: schoolType, targets: sel.map((s) => ({ dept_id: s.dept_id, school: s.school, dept: s.dept, group: s.group, tier: s.tier })) });
       setOut((d && d.text) || '');
     } catch (e) { setErr(e.message); }
     setBusy(false);
@@ -740,7 +718,6 @@ const TIER_HINT = {
   dream: '分數離門檻還有段距離 —— 當目標、衝衝看，但別只填這一區。',
   prep:  '分數就落在門檻邊緣 —— 準備充分很有機會，這是你的主力區。',
   safe:  '分數穩穩過第一階 —— 適合放進穩定名單，先保住基本盤。',
-  checkOnly: '這些系一階只設檢定門檻、不辦倍率篩選（多為青儲組等小名額）—— 你檢定過了就直接進二階，重點放在備審與面試。',
 };
 function TierBand({ col, renderItem }) {
   const [open, setOpen] = useState(true);
@@ -757,7 +734,7 @@ function TierBand({ col, renderItem }) {
       </button>
       {open && (
         <div className="tier-body">
-          <p className="tier-hint">{TIER_HINT[col.key] || ''}</p>
+          <p className="tier-hint">{col.hint || TIER_HINT[col.key] || ''}</p>
           {n === 0 ? <p className="tier-empty">這一區目前沒有符合的校系。</p> : (
             <>
               <div className="tier-grid">{visible.map(renderItem)}</div>
@@ -780,7 +757,7 @@ const TW_SUBS = ['國', '英', '數A', '數B', '社', '自'];
 const PL_FLD = { width: '100%', padding: '9px 11px', border: '1.5px solid #d9d9d2', borderRadius: 8, fontSize: '.95rem', fontFamily: 'inherit', background: '#f7f7f4', color: '#16233b' };
 const PL_BTN = { background: '#16233b', color: '#f7f7f4', border: 'none', borderRadius: 10, padding: '11px 22px', fontWeight: 800, cursor: 'pointer' };
 
-function Placement({ student }) {
+function HsScreen({ student }) {
   const [scores, setScores] = useState({});
   const [clusters, setClusters] = useState([]);
   const [mode, setMode] = useState('sim');
@@ -799,16 +776,13 @@ function Placement({ student }) {
     { key: 'dream', label: '夢幻', sub: '一階偏難', bg: '#f6d9df', color: '#8e1f34', list: res.dream || [] },
     { key: 'prep', label: '適中', sub: '一階邊緣', bg: '#fce9c8', color: '#b06f00', list: res.prep || [] },
     { key: 'safe', label: '安全', sub: '穩過一階', bg: '#d7efe0', color: '#15703c', list: res.safe || [] },
-  ].concat(res.checkOnly && res.checkOnly.length ? [
-    { key: 'checkOnly', label: '檢定即過', sub: '僅檢定・無倍率篩選', bg: '#dce8f7', color: '#1c4d8f', list: res.checkOnly },
-  ] : []) : [];
+  ] : [];
   const [q, setQ] = useState('');
   const qq = q.trim();
   const fcols = qq ? cols.map((c) => Object.assign({}, c, { list: c.list.filter((m) => ((m.school || '') + (m.dept || '') + (m.cluster || '') + (m.group || '')).indexOf(qq) >= 0) })) : cols;
 
   return (
-    <div style={{ padding: '10px 4px 90px' }}>
-      <h2 style={{ margin: '4px 0' }}>落點分析</h2>
+    <div>
       <p style={{ color: '#5a6378', fontSize: '.9rem' }}>個人申請「<b>第一階段</b>」過篩難易推估：先看<b>檢定門檻</b>（各科最低標級），再用各校系去年「各篩選順序的通過最低級分」逐段比對，分成夢幻／適中／安全。<b>過一階 ≠ 錄取</b>；第二階段（書審／面試）另需準備。</p>
 
       <div style={{ display: 'inline-flex', border: '2px solid #16233b', borderRadius: 999, overflow: 'hidden', margin: '6px 0 12px' }}>
@@ -864,11 +838,6 @@ function Placement({ student }) {
                     ✕ 檢定未過：{m.checkFail.join('、')}
                     <div style={{ fontWeight: 400, fontSize: '.74rem', color: '#5a6378', marginTop: 2 }}>檢定沒過就無法進入倍率篩選，需先拉高該科。</div>
                   </div>
-                ) : m.minMargin == null ? (
-                  <div style={{ fontSize: '.84rem', marginTop: 4, color: '#1c4d8f', fontWeight: 700 }}>
-                    ✓ 通過檢定即過一階（本系不辦倍率篩選）
-                    <div style={{ fontWeight: 400, fontSize: '.74rem', color: '#5a6378', marginTop: 2 }}>名額通常很少，勝負在第二階段的備審與面試。</div>
-                  </div>
                 ) : (
                   <div style={{ fontSize: '.84rem', marginTop: 4 }}>
                     最吃緊關卡：<b>{m.binding || '—'}</b>
@@ -898,7 +867,7 @@ function Placement({ student }) {
       {res && (
         <p style={{ fontSize: '.76rem', color: '#5a6378', marginTop: 14 }}>
           {res.note}<br />{res.source}<br />
-          註：音樂／美術／體育等<b>術科校系</b>以術科成績篩選，不適用學測級分推估，未列入本結果。一階僅設檢定、不辦倍率篩選的校系（多為青儲組）列在「檢定即過」區。
+          註：音樂／美術／體育等<b>術科校系</b>以術科成績篩選，不適用學測級分推估，未列入本結果。部分校系去年未觸發篩選（人人過一階），亦不會出現在此。
         </p>
       )}
     </div>
@@ -910,7 +879,7 @@ const VT_GROUPS = ['01-機械群', '02-動力機械群', '03-電機與電子群�
 const VT_SUBS = ['國', '英', '數', '專一', '專二'];
 const VT_SUBLABEL = { '國': '國文', '英': '英文', '數': '數學', '專一': '專業一', '專二': '專業二' };
 
-function VtPlacement({ student }) {
+function VtScreen({ student }) {
   const [scores, setScores] = useState({});
   const [group, setGroup] = useState('');
   const [mode, setMode] = useState('sim');
@@ -935,8 +904,7 @@ function VtPlacement({ student }) {
   const fcols = qq ? cols.map((c) => Object.assign({}, c, { list: c.list.filter((m) => ((m.school || '') + (m.dept || '') + (m.cluster || '') + (m.group || '')).indexOf(qq) >= 0) })) : cols;
 
   return (
-    <div style={{ padding: '10px 4px 90px' }}>
-      <h2 style={{ margin: '4px 0' }}>落點分析<span style={{ fontSize: '.8rem', color: '#5a6378', fontWeight: 600, marginLeft: 6 }}>技高・四技二專甄選</span></h2>
+    <div>
       <p style={{ color: '#5a6378', fontSize: '.9rem' }}>四技二專甄選入學「<b>第一階段統測倍率篩選</b>」過篩難易推估。選你的統測群、輸入五科級分（可先用模擬級分規劃），系統以各校系去年「各篩選順序的通過標準」逐段比對。<b>過一階 ≠ 錄取</b>；第二階段指定項目甄試（備審／面試／實作）另需準備。</p>
 
       <div style={{ display: 'inline-flex', border: '2px solid #16233b', borderRadius: 999, overflow: 'hidden', margin: '6px 0 12px' }}>
@@ -1012,6 +980,191 @@ function VtPlacement({ student }) {
   );
 }
 
+/* ============ 落點：管道分頁籤（甄選/申請 ⇄ 分發） ============ */
+
+function ChanTabs({ chan, setChan, labels }) {
+  return (
+    <div style={{ display: 'flex', gap: 8, margin: '4px 0 14px' }}>
+      {[['screen', labels[0]], ['dispatch', labels[1]]].map(([k, lb]) => (
+        <button key={k} onClick={() => setChan(k)} style={{
+          flex: 1, border: '2px solid #16233b', borderRadius: 12, padding: '10px 8px',
+          fontWeight: 800, fontSize: '.95rem', cursor: 'pointer', fontFamily: 'inherit',
+          background: chan === k ? '#16233b' : '#fff', color: chan === k ? '#ffde59' : '#16233b',
+        }}>{lb}</button>
+      ))}
+    </div>
+  );
+}
+
+const DISPATCH_HINT = {
+  dream: '加權總分還低於去年門檻 —— 當衝刺目標，志願序可以填前面，但別只押這區。',
+  prep: '加權總分就在去年門檻附近 —— 年度浮動下有輸有贏，這是你的主戰區，志願序排好排滿。',
+  safe: '加權總分明顯高於去年門檻 —— 適合墊在志願序後段保底。',
+};
+
+function DispatchCard({ m }) {
+  return (
+    <div className="dept-card">
+      <div style={{ fontWeight: 800, fontSize: '.92rem' }}>{m.school} {m.dept}</div>
+      <div style={{ color: '#5a6378', fontSize: '.8rem' }}>{m.quota ? '名額 ' + m.quota : ''}</div>
+      {m.cutoff != null ? (
+        <div style={{ fontSize: '.84rem', marginTop: 4 }}>
+          我 <b>{m.total}</b>／去年 <b>{m.cutoff}</b>
+          <span style={{ color: m.margin >= 0 ? '#15703c' : '#8e1f34', fontWeight: 800, marginLeft: 6 }}>
+            {m.margin >= 0 ? '+' : ''}{m.margin}
+          </span>
+        </div>
+      ) : (
+        <div style={{ fontSize: '.82rem', marginTop: 4, color: '#b06f00', fontWeight: 700 }}>{m.reason || '去年無門檻資料'}</div>
+      )}
+      <div style={{ fontSize: '.72rem', color: '#8a94a6', marginTop: 3 }}>{m.wstr}</div>
+      {m.tie != null && <div style={{ fontSize: '.72rem', color: '#8a94a6' }}>去年同分參酌：{m.tie}</div>}
+    </div>
+  );
+}
+
+function DispatchTiers({ res, q, setQ }) {
+  const cols = [
+    { key: 'dream', label: '夢幻', sub: '低於去年門檻', bg: '#f6d9df', color: '#8e1f34', hint: DISPATCH_HINT.dream, list: res.dream || [] },
+    { key: 'prep', label: '適中', sub: '門檻邊緣', bg: '#fce9c8', color: '#b06f00', hint: DISPATCH_HINT.prep, list: res.prep || [] },
+    { key: 'safe', label: '安全', sub: '高於去年門檻', bg: '#d7efe0', color: '#15703c', hint: DISPATCH_HINT.safe, list: res.safe || [] },
+  ];
+  const qq = q.trim();
+  const fcols = qq ? cols.map((c) => Object.assign({}, c, { list: c.list.filter((m) => ((m.school || '') + (m.dept || '')).indexOf(qq) >= 0) })) : cols;
+  return (
+    <div className="tiers">
+      <p className="tiers-legend">由難到穩：<b>夢幻</b> › <b>適中</b> › <b>安全</b>　點標題可收合。以「你的加權總分 vs 去年最低錄取」推估，<b>年度會浮動、僅供參考</b>。</p>
+      <input className="tier-filter" value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔎 篩選校名或系名" />
+      {fcols.map((col) => (
+        <TierBand key={col.key} col={col} renderItem={(m, i) => <DispatchCard key={i} m={m} />} />
+      ))}
+      {qq && fcols.every((c) => c.list.length === 0) && <p className="tier-empty">找不到含「{qq}」的校系。</p>}
+      {res.nodata && res.nodata.length > 0 && (
+        <details style={{ marginTop: 10 }}>
+          <summary style={{ fontSize: '.82rem', color: '#5a6378', fontWeight: 700, cursor: 'pointer' }}>去年無門檻資料的校系（{res.nodata.length}）——新設或去年未招滿，不代表好考或難考</summary>
+          <div className="tier-grid" style={{ marginTop: 8 }}>
+            {res.nodata.slice(0, 40).map((m, i) => <DispatchCard key={i} m={m} />)}
+          </div>
+        </details>
+      )}
+      <p style={{ fontSize: '.76rem', color: '#5a6378', marginTop: 14 }}>{res.note}<br />{res.source}</p>
+    </div>
+  );
+}
+
+/* ---- 技高：分發入學區塊 ---- */
+function VtDispatch({ student }) {
+  const [scores, setScores] = useState({});
+  const [group, setGroup] = useState('');
+  const [res, setRes] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [q, setQ] = useState('');
+  const setScore = (k, v) => setScores(Object.assign({}, scores, { [k]: v }));
+  async function run() {
+    if (!group) { setErr('請先選擇你的統測群類'); return; }
+    setBusy(true); setErr('');
+    try { const d = await api('dispatchVt', { scores: scores, group: group }); setRes(d); }
+    catch (e) { setErr(e.message); }
+    setBusy(false);
+  }
+  return (
+    <div>
+      <p style={{ color: '#5a6378', fontSize: '.9rem' }}>四技二專「<b>聯合登記分發</b>」推估：輸入統測五科<b>原始分數（0–100）</b>，系統用<b>每個校系自己的加權</b>（國英數×1~2、專業×2~3）算你的總分，和去年最低錄取總分比對。<b>選填志願前的最後一關</b>，記得衝穩保都要填。</p>
+      <div style={{ marginBottom: 10 }}>
+        <div style={{ fontSize: '.82rem', color: '#5a6378', fontWeight: 700, marginBottom: 4 }}>你的統測群類</div>
+        <select value={group} onChange={(e) => setGroup(e.target.value)} style={PL_FLD}>
+          <option value="">請選擇…</option>
+          {VT_GROUPS.map((g) => <option key={g} value={g}>{g}</option>)}
+        </select>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: 8 }}>
+        {VT_SUBS.map((s) => (
+          <div key={s}>
+            <div style={{ fontSize: '.8rem', color: '#5a6378', fontWeight: 700 }}>{VT_SUBLABEL[s]}</div>
+            <input style={PL_FLD} type="number" min="0" max="100" placeholder="0–100" value={scores[s] || ''} onChange={(e) => setScore(s, e.target.value)} />
+          </div>
+        ))}
+      </div>
+      <div style={{ fontSize: '.78rem', color: '#5a6378', marginTop: 4 }}>注意：這裡填<b>原始分數</b>（0–100），不是甄選用的級分。</div>
+      <button style={{ ...PL_BTN, marginTop: 12 }} disabled={busy} onClick={run}>{busy ? '分析中…' : '分析分發落點'}</button>
+      {err && <p style={{ color: '#b3261e', fontSize: '.9rem' }}>{err}</p>}
+      {res && <DispatchTiers res={res} q={q} setQ={setQ} />}
+    </div>
+  );
+}
+
+/* ---- 高中：考試分發區塊 ---- */
+const HS_GSAT = ['國', '英', '數A', '數B', '社', '自'];
+const HS_AST = ['數甲', '數乙', '歷', '地', '公', '物', '化', '生'];
+function HsDispatch({ student }) {
+  const [scores, setScores] = useState({});
+  const [res, setRes] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [q, setQ] = useState('');
+  const setScore = (k, v) => setScores(Object.assign({}, scores, { [k]: v }));
+  async function run() {
+    const filled = {};
+    Object.keys(scores).forEach((k) => { if (String(scores[k]).trim() !== '') filled[k] = scores[k]; });
+    if (!Object.keys(filled).length) { setErr('至少輸入一科（60 級分制）'); return; }
+    setBusy(true); setErr('');
+    try { const d = await api('dispatchHs', { scores: filled }); setRes(d); }
+    catch (e) { setErr(e.message); }
+    setBusy(false);
+  }
+  const grid = (subs) => (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(76px, 1fr))', gap: 8 }}>
+      {subs.map((s) => (
+        <div key={s}>
+          <div style={{ fontSize: '.8rem', color: '#5a6378', fontWeight: 700 }}>{s}</div>
+          <input style={PL_FLD} type="number" min="0" max="60" placeholder="0–60" value={scores[s] || ''} onChange={(e) => setScore(s, e.target.value)} />
+        </div>
+      ))}
+    </div>
+  );
+  return (
+    <div>
+      <p style={{ color: '#5a6378', fontSize: '.9rem' }}>大學「<b>考試分發</b>」推估：全部成績以 <b>60 級分制</b>輸入，系統用各校系採計組合與加權算總分、比對去年最低錄取分數。只填有考的科目即可——填越多科，能比對的校系越多。</p>
+      <div style={{ fontSize: '.82rem', color: '#5a6378', fontWeight: 700, margin: '10px 0 4px' }}>學測科目（請填<a href="https://www.uac.edu.tw/" target="_blank" rel="noreferrer">大考中心官方換算後</a>的 60 級分，不是 15 級分×4）</div>
+      {grid(HS_GSAT)}
+      <div style={{ fontSize: '.82rem', color: '#5a6378', fontWeight: 700, margin: '12px 0 4px' }}>分科測驗科目（直接填 60 級分）</div>
+      {grid(HS_AST)}
+      <button style={{ ...PL_BTN, marginTop: 12 }} disabled={busy} onClick={run}>{busy ? '分析中…' : '分析分發落點'}</button>
+      {err && <p style={{ color: '#b3261e', fontSize: '.9rem' }}>{err}</p>}
+      {res && res.counts && (res.counts.skippedMissing > 0 || res.counts.skippedArts > 0) && (
+        <p style={{ fontSize: '.78rem', color: '#b06f00', marginTop: 8 }}>
+          {res.counts.skippedMissing > 0 && <>另有 {res.counts.skippedMissing} 個系組因你未填其採計科目而未列入——多填幾科可看更多。</>}
+          {res.counts.skippedArts > 0 && <>　{res.counts.skippedArts} 個術科校系不適用本推估。</>}
+        </p>
+      )}
+      {res && <DispatchTiers res={res} q={q} setQ={setQ} />}
+    </div>
+  );
+}
+
+/* ---- 對外元件：落點頁（管道分頁籤包裝） ---- */
+function Placement({ student }) {
+  const [chan, setChan] = useState('screen');
+  return (
+    <div style={{ padding: '10px 4px 90px' }}>
+      <h2 style={{ margin: '4px 0 10px' }}>落點分析</h2>
+      <ChanTabs chan={chan} setChan={setChan} labels={['個人申請（一階篩選）', '考試分發（分科）']} />
+      {chan === 'screen' ? <HsScreen student={student} /> : <HsDispatch student={student} />}
+    </div>
+  );
+}
+function VtPlacement({ student }) {
+  const [chan, setChan] = useState('screen');
+  return (
+    <div style={{ padding: '10px 4px 90px' }}>
+      <h2 style={{ margin: '4px 0 10px' }}>落點分析<span style={{ fontSize: '.8rem', color: '#5a6378', fontWeight: 600, marginLeft: 6 }}>技高・四技二專</span></h2>
+      <ChanTabs chan={chan} setChan={setChan} labels={['甄選入學（一階篩選）', '分發入學（登記分發）']} />
+      {chan === 'screen' ? <VtScreen student={student} /> : <VtDispatch student={student} />}
+    </div>
+  );
+}
+
 /* ============ App ============ */
 
 /* 四格大卡片主導覽的每格資訊（圖示＋一句說明） */
@@ -1057,31 +1210,9 @@ export default function App() {
   const [tab, setTab] = useState('home');
   const [quickAdd, setQuickAdd] = useState(null); // null | { semester }
   const [editAnchor, setEditAnchor] = useState(false);
-  // 「記住我」自動回登：有存 token 才進入 booting 狀態（v36）
-  const [booting, setBooting] = useState(() => { try { return !!localStorage.getItem('tips_tok'); } catch (e) { return false; } });
-
-  useEffect(() => {
-    let t = null;
-    try { t = localStorage.getItem('tips_tok'); } catch (e) {}
-    if (!t) return;
-    setToken(t);
-    api('me')
-      .then((u) => { setStudent(u); setTab('home'); })
-      .catch(() => { try { localStorage.removeItem('tips_tok'); } catch (e) {} setToken(null); })
-      .finally(() => setBooting(false));
-  }, []);
 
   function goQuickAdd(semester) { setQuickAdd({ semester: semester || null }); setTab('artifacts'); }
 
-  if (booting) {
-    return (
-      <div className="login-wrap">
-        <div className="login-card" style={{ maxWidth: 320, margin: '80px auto', textAlign: 'center' }}>
-          <p className="sub">…</p>
-        </div>
-      </div>
-    );
-  }
   if (!student) return <Login onDone={(u) => { setStudent(u); setTab('home'); }} />;
 
   const isTeacher = student.role === 'teacher';
@@ -1108,7 +1239,7 @@ export default function App() {
           {enUS ? 'TIPS College Prep' : 'TIPS 學習歷程'}<small>{student.name}{isTeacher ? '（老師）' : ''}</small>
         </div>
         {!isTeacher && <button onClick={() => setEditAnchor(true)}>{enUS ? T3('方向', 'Focus', '方向') : '科別／組別'}</button>}
-        <button onClick={() => { try { localStorage.removeItem('tips_tok'); } catch (e) {} setToken(null); setStudent(null); }}>{enUS ? T3('登出', 'Log out', '登出') : '登出'}</button>
+        <button onClick={() => { setToken(null); setStudent(null); }}>{enUS ? T3('登出', 'Log out', '登出') : '登出'}</button>
       </header>
 
       {!showHub && (
@@ -1259,7 +1390,6 @@ function Login({ onDone }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [created, setCreated] = useState(null);
-  const [remember, setRemember] = useState(true);   // 記住我（v36）
   const isUS = APP_MARKET === 'us';
   const lt = (zh, en) => (isUS ? en : zh);
   const TW_CITIES = ['台北市', '新北市', '桃園市', '台中市', '台南市', '高雄市', '基隆市', '新竹市', '新竹縣', '苗栗縣', '彰化縣', '南投縣', '雲林縣', '嘉義市', '嘉義縣', '屏東縣', '宜蘭縣', '花蓮縣', '台東縣', '澎湖縣', '金門縣', '連江縣'];
@@ -1270,9 +1400,6 @@ function Login({ onDone }) {
     try {
       const data = await api('login', { studentId, loginCode });
       setToken(data.token);
-      if (remember && data.student && data.student.role !== 'teacher') {
-        try { localStorage.setItem('tips_tok', data.token); } catch (e2) {}
-      }
       onDone(data.student);
     } catch (er) { setErr(er.message); } finally { setBusy(false); }
   }
@@ -1297,10 +1424,7 @@ function Login({ onDone }) {
     } catch (er) { setErr(er.message); } finally { setBusy(false); }
   }
 
-  function enterApp() {
-    try { localStorage.setItem('tips_tok', created.token); } catch (e) {}
-    setToken(created.token); onDone(created.student);
-  }
+  function enterApp() { setToken(created.token); onDone(created.student); }
 
   // ── 台灣線雙入口選擇畫面（先選高中/技高，再進註冊）──
   if (entry === null) {
@@ -1335,7 +1459,7 @@ function Login({ onDone }) {
 
   return (
     <div className="login-wrap">
-      <div className={'login-card' + (mode === 'signup' ? ' login-card--wide' : '')}>
+      <div className="login-card">
         {!isUS && (
           <button className="btn-sm" style={{ marginBottom: 10 }} onClick={() => { setErr(''); setEntry(null); }}>← 返回選擇入口</button>
         )}
@@ -1354,10 +1478,7 @@ function Login({ onDone }) {
             <input id="sid" name="username" value={studentId} onChange={(e) => setStudentId(e.target.value)} placeholder={lt('你的帳號', 'your account')} autoComplete="username" />
             <label htmlFor="code">{lt('密碼', 'Password')}</label>
             <input id="code" name="password" type="password" value={loginCode} onChange={(e) => setLoginCode(e.target.value)} placeholder={lt('你的密碼', 'your password')} autoComplete="current-password" />
-            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 10, fontSize: '.85rem', cursor: 'pointer' }}>
-              <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} style={{ width: 'auto' }} />
-              <span>{lt('保持登入（共用電腦請取消勾選）', 'Keep me logged in (uncheck on shared computers)')}</span>
-            </label>
+            <div style={{ fontSize: '.72rem', color: '#5a6378', marginTop: 4 }}>{lt('登入後可讓瀏覽器記住帳號密碼，下次自動帶入。', 'Let your browser save these to sign in faster next time.')}</div>
             <button className="btn" type="submit" disabled={busy} style={{ marginTop: 12 }}>{busy ? lt('登入中…', 'Signing in…') : lt('登入', 'Log in')}</button>
             {err && <p className="err">{err}</p>}
             <button type="button" className="btn-sm" style={{ marginTop: 14 }} onClick={() => { setErr(''); setMode('signup'); }}>{lt('還沒有帳號？免費註冊 →', 'New here? Sign up free →')}</button>
@@ -1366,58 +1487,37 @@ function Login({ onDone }) {
 
         {mode === 'signup' && (
           <form onSubmit={signup} autoComplete="on">
-            <div className="signup-head">
-              <h1>{lt('學生免費註冊 👋', 'Sign up free 👋')}</h1>
-              <button type="button" className="btn-sm" onClick={() => { setErr(''); setMode('login'); }}>{lt('已有帳號？直接登入 →', 'Have an account? Log in →')}</button>
-            </div>
+            <h1>{lt('學生免費註冊', 'Sign up free 👋')}</h1>
             <p className="sub">{lt('建立帳號，開始把作品一路存下來。免費、免信用卡。', 'Create your account and capture the real work over four years. No credit card.')}</p>
-            <div className="form-grid">
-              <div className="ff">
-                <label htmlFor="su-name">{lt('學生姓名', 'Student’s name')}</label>
-                <input id="su-name" name="name" value={name} onChange={(e) => setName(e.target.value)} placeholder={lt('例：陳小明', 'e.g. Maya Chen')} autoComplete="name" />
-              </div>
-              <div className="ff">
-                <label htmlFor="su-email">{lt('Email（家長或學生）', 'Parent or student email')}</label>
-                <input id="su-email" name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" autoComplete="email" />
-              </div>
-              <div className="ff">
-                <label htmlFor="su-acct">{lt('設定帳號', 'Choose an account')}</label>
-                <input id="su-acct" name="new-username" value={account} onChange={(e) => setAccount(e.target.value)} placeholder={lt('4–20 碼英數（登入用）', '4–20 letters/digits (for login)')} autoComplete="username" />
-                <div style={{ fontSize: '.72rem', color: '#5a6378', marginTop: 4, lineHeight: 1.5 }}>{lt('帳號規則：4–20 碼，限英文字母、數字、點（.）或底線（_）；這就是你之後登入用的帳號，請自己設定並記牢。', 'Account rules: 4–20 characters — letters, digits, dot (.) or underscore (_). This is the account you’ll log in with, so choose it yourself and keep it.')}</div>
-              </div>
-              <div className="ff">
-                <label htmlFor="su-pw">{lt('設定密碼', 'Choose a password')}</label>
-                <input id="su-pw" name="new-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={lt('至少 6 碼', 'at least 6 characters')} autoComplete="new-password" />
-                <div style={{ fontSize: '.72rem', color: '#5a6378', marginTop: 4, lineHeight: 1.5 }}>{lt('密碼規則：至少 6 碼，由你自己設定；登入時可讓瀏覽器記住，下次自動帶入。忘記時可請老師或客服協助查詢。', 'Password rules: at least 6 characters, set by you. Your browser can remember it for next time; if you forget it, a teacher or support can help you retrieve it.')}</div>
-              </div>
-              {!isUS && (
-                <>
-                  <div className="ff">
-                    <label htmlFor="su-phone">聯絡電話</label>
-                    <input id="su-phone" name="tel" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="09xx-xxx-xxx" autoComplete="tel" />
-                  </div>
-                  <div className="ff">
-                    <label htmlFor="su-school">就讀學校（選填）</label>
-                    <input id="su-school" value={schoolName} onChange={(e) => setSchoolName(e.target.value)} placeholder={entry === 'vt' ? '例：台中高工' : '例：台中一中'} autoComplete="organization" />
-                  </div>
-                  <div className="ff">
-                    <label htmlFor="su-city">縣市（選填）</label>
-                    <select id="su-city" value={city} onChange={(e) => setCity(e.target.value)}>
-                      <option value="">請選擇…</option>
-                      {TW_CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-                </>
-              )}
-              <div className="ff">
-                <label htmlFor="su-grade">{lt('目前年級', 'Current grade')}</label>
-                <select id="su-grade" value={grade} onChange={(e) => setGrade(e.target.value)}>
-                  {isUS
-                    ? ['9', '10', '11', '12'].map((g) => <option key={g} value={g}>{'Grade ' + g}</option>)
-                    : ['10', '11', '12'].map((g) => <option key={g} value={g}>{'高' + (g === '10' ? '一' : g === '11' ? '二' : '三') + '（' + g + '）'}</option>)}
+            <label htmlFor="su-name">{lt('學生姓名', 'Student’s name')}</label>
+            <input id="su-name" name="name" value={name} onChange={(e) => setName(e.target.value)} placeholder={lt('例：陳小明', 'e.g. Maya Chen')} autoComplete="name" />
+            <label htmlFor="su-acct">{lt('設定帳號', 'Choose an account')}</label>
+            <input id="su-acct" name="new-username" value={account} onChange={(e) => setAccount(e.target.value)} placeholder={lt('4–20 碼英數（登入用）', '4–20 letters/digits (for login)')} autoComplete="username" />
+            <div style={{ fontSize: '.72rem', color: '#5a6378', marginTop: 4, lineHeight: 1.5 }}>{lt('帳號規則：4–20 碼，限英文字母、數字、點（.）或底線（_）；這就是你之後登入用的帳號，請自己設定並記牢。', 'Account rules: 4–20 characters — letters, digits, dot (.) or underscore (_). This is the account you’ll log in with, so choose it yourself and keep it.')}</div>
+            <label htmlFor="su-pw">{lt('設定密碼', 'Choose a password')}</label>
+            <input id="su-pw" name="new-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={lt('至少 6 碼', 'at least 6 characters')} autoComplete="new-password" />
+            <div style={{ fontSize: '.72rem', color: '#5a6378', marginTop: 4, lineHeight: 1.5 }}>{lt('密碼規則：至少 6 碼，由你自己設定；登入時可讓瀏覽器記住，下次自動帶入。忘記時可請老師或客服協助查詢。', 'Password rules: at least 6 characters, set by you. Your browser can remember it for next time; if you forget it, a teacher or support can help you retrieve it.')}</div>
+            <label htmlFor="su-email">{lt('Email（家長或學生）', 'Parent or student email')}</label>
+            <input id="su-email" name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" autoComplete="email" />
+            {!isUS && (
+              <>
+                <label htmlFor="su-phone">聯絡電話</label>
+                <input id="su-phone" name="tel" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="09xx-xxx-xxx" autoComplete="tel" />
+                <label htmlFor="su-school">就讀學校（選填）</label>
+                <input id="su-school" value={schoolName} onChange={(e) => setSchoolName(e.target.value)} placeholder={entry === 'vt' ? '例：台中高工' : '例：台中一中'} autoComplete="organization" />
+                <label htmlFor="su-city">縣市（選填）</label>
+                <select id="su-city" value={city} onChange={(e) => setCity(e.target.value)}>
+                  <option value="">請選擇…</option>
+                  {TW_CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
-              </div>
-            </div>
+              </>
+            )}
+            <label htmlFor="su-grade">{lt('目前年級', 'Current grade')}</label>
+            <select id="su-grade" value={grade} onChange={(e) => setGrade(e.target.value)}>
+              {isUS
+                ? ['9', '10', '11', '12'].map((g) => <option key={g} value={g}>{'Grade ' + g}</option>)
+                : ['10', '11', '12'].map((g) => <option key={g} value={g}>{'高' + (g === '10' ? '一' : g === '11' ? '二' : '三') + '（' + g + '）'}</option>)}
+            </select>
             {!isUS && (
               <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 12, fontSize: '.78rem', color: '#5a6378', lineHeight: 1.55 }}>
                 <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} style={{ marginTop: 3, width: 'auto' }} />
@@ -1426,6 +1526,7 @@ function Login({ onDone }) {
             )}
             <button className="btn" type="submit" style={{ marginTop: 14 }} disabled={busy}>{busy ? lt('建立中…', 'Creating…') : lt('免費建立帳號', 'Create free account')}</button>
             {err && <p className="err">{err}</p>}
+            <button type="button" className="btn-sm" style={{ marginTop: 14 }} onClick={() => { setErr(''); setMode('login'); }}>{lt('已有帳號，請登入 →', '← Already have an account? Log in')}</button>
           </form>
         )}
 
@@ -1605,9 +1706,10 @@ function QuotaBar({ bySemester, schoolType }) {
 
 /* ============ AI 反思教練（Phase 2） ============ */
 
-function ArtifactCoach({ artifact, summary, onSummaryChange }) {
+function ArtifactCoach({ artifact }) {
   const [reflectOut, setReflectOut] = useState('');
   const [sumOut, setSumOut] = useState('');
+  const [draft, setDraft] = useState(artifact.summary_100 || '');
   const [busy, setBusy] = useState('');        // '' | 'reflect' | 'summary'
   const [err, setErr] = useState('');
   const [remaining, setRemaining] = useState(null);
@@ -1619,11 +1721,11 @@ function ArtifactCoach({ artifact, summary, onSummaryChange }) {
     finally { setBusy(''); }
   }
   async function checkSummary() {
-    if (!summary.trim()) { setErr('先寫下你的簡述草稿（幾句話就好），教練才能給建議。'); return; }
+    if (!draft.trim()) { setErr('先寫下你的簡述草稿（幾句話就好），教練才能給建議。'); return; }
     setBusy('summary'); setErr('');
     try {
-      try { await api('updateArtifact', { artifact_id: artifact.artifact_id, summary_100: summary }); } catch (e) { /* 存簡述失敗不擋健檢 */ }
-      const d = await api('aiSummary', { artifact_id: artifact.artifact_id, draft: summary });
+      try { await api('updateArtifact', { artifact_id: artifact.artifact_id, summary_100: draft }); } catch (e) { /* 存簡述失敗不擋健檢 */ }
+      const d = await api('aiSummary', { artifact_id: artifact.artifact_id, draft });
       setSumOut(d.text);
       if (typeof d.remaining === 'number') setRemaining(d.remaining);
     } catch (e) { setErr(e.message); }
@@ -1645,14 +1747,14 @@ function ArtifactCoach({ artifact, summary, onSummaryChange }) {
         </div>
       )}
 
-      {/* 2) 100 字簡述（與上傳包共用同一份，改這裡那邊也會同步） */}
-      <label className="coach-label">你的 100 字簡述（{summary.length}/100 字）</label>
-      <textarea className="coach-ta" rows="3" value={summary} onChange={(e) => onSummaryChange(e.target.value)}
+      {/* 2) 100 字簡述 */}
+      <label className="coach-label">你的 100 字簡述</label>
+      <textarea className="coach-ta" rows="3" value={draft} onChange={(e) => setDraft(e.target.value)}
         placeholder="寫下你的 100 字簡述草稿（幾句話就好）…" />
 
       {/* 3) 簡述健檢——在 100 字下方 */}
       <div className="coach-sum-row">
-        <button className="btn-sm" disabled={!!busy || !summary.trim()} onClick={checkSummary}>
+        <button className="btn-sm" disabled={!!busy || !draft.trim()} onClick={checkSummary}>
           ✍️ 送給教練檢查{remaining !== null ? `（本件剩 ${remaining} 次）` : ''}
         </button>
         <span className="coach-quota">每件最多 3 次・同段沒改不重算</span>
@@ -1665,72 +1767,6 @@ function ArtifactCoach({ artifact, summary, onSummaryChange }) {
         </div>
       )}
       {err && <p className="err">{err}</p>}
-
-      {/* 4) 對話教練（多輪） */}
-      <CoachChat artifact={artifact} />
-    </div>
-  );
-}
-
-/** 對話教練：跟教練就這件素材多輪對話（v28 MVP，觀察期不設次數上限） */
-function CoachChat({ artifact }) {
-  const [open, setOpen] = useState(false);
-  const [msgs, setMsgs] = useState(null);       // null = 尚未載入歷史
-  const [input, setInput] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState('');
-  const [disclosure, setDisclosure] = useState('');
-
-  function toggle() {
-    const o = !open;
-    setOpen(o);
-    if (o && msgs === null) {
-      api('aiChat', { artifact_id: artifact.artifact_id, load: true })
-        .then((d) => setMsgs(d.history || []))
-        .catch(() => setMsgs([]));
-    }
-  }
-  async function send() {
-    const text = input.trim();
-    if (!text || busy) return;
-    setBusy(true); setErr(''); setInput('');
-    setMsgs((m) => (m || []).concat([{ role: 's', text }]));
-    try {
-      const d = await api('aiChat', { artifact_id: artifact.artifact_id, message: text });
-      setMsgs(d.history || []);
-      if (d.disclosure) setDisclosure(d.disclosure);
-    } catch (e) { setErr(e.message); }
-    finally { setBusy(false); }
-  }
-  function onKey(e) {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
-  }
-
-  return (
-    <div className="coach-chat">
-      <button className="btn-sm" onClick={toggle}>💬 跟教練聊聊{open ? '（收起）' : ''}</button>
-      {open && (
-        <>
-          <div className="chat-log">
-            {(!msgs || msgs.length === 0) && (
-              <p className="empty-hint" style={{ padding: '8px 0' }}>
-                {msgs === null ? '載入中…' : '把上面反思問題的想法打在這裡，教練會陪你把它想得更深。教練只引導、不代寫。'}
-              </p>
-            )}
-            {msgs && msgs.map((m, i) => (
-              <div key={i} className={'chat-b ' + (m.role === 's' ? 'chat-me' : 'chat-coach')}>{m.text}</div>
-            ))}
-            {busy && <div className="chat-b chat-coach">教練思考中…</div>}
-          </div>
-          <div className="chat-row">
-            <textarea rows="2" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={onKey}
-              placeholder="打字跟教練聊（Enter 送出、Shift+Enter 換行）…" />
-            <button className="btn-sm" disabled={busy || !input.trim()} onClick={send}>送出</button>
-          </div>
-          {err && <p className="err">{err}</p>}
-          {disclosure && <p className="hint" style={{ whiteSpace: 'pre-wrap' }}>{disclosure}</p>}
-        </>
-      )}
     </div>
   );
 }
@@ -1752,7 +1788,7 @@ function SynthesisCoach() {
   return (
     <div className="coach coach-syn">
       <button className="btn-ghost" onClick={() => setOpen(!open)}>
-         🎓 綜整心得教練{open ? '（收起）' : ''}
+        🎓 綜整心得教練{open ? '（收起）' : ''}
       </button>
       {open && (
         <div className="coach-draft">
@@ -1791,32 +1827,19 @@ const STEP_DEFS = [
 ];
 const STEP_IDX = { '': 0, editing: 1, submitted: 2, certified: 3 };
 
-function ArtifactPack({ artifact, summary, onSummaryChange, onChanged }) {
+function ArtifactPack({ artifact, onChanged }) {
   const [open, setOpen] = useState(false);
+  const [summary, setSummary] = useState(artifact.summary_100 || '');
   const [status, setStatus] = useState(artifact.is_uploaded_to_school || '');
   const [checked, setChecked] = useState(!!artifact.is_checked_to_central && artifact.is_checked_to_central !== 'false');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
-  const [pre, setPre] = useState(null);        // AI 預檢結果 {light, text, cached}
-  const [preBusy, setPreBusy] = useState(false);
-  const [preOpen, setPreOpen] = useState(false);
 
   async function save(patch, okMsg) {
     setBusy(true); setMsg('');
     try { await api('updateArtifact', { artifact_id: artifact.artifact_id, ...patch }); setMsg(okMsg); onChanged && onChanged(); }
     catch (e) { setMsg(e.message); }
     finally { setBusy(false); }
-  }
-
-  // 第一關：AI 預檢（按「已送認證」自動觸發；內容沒改回快取 0 token）
-  async function runPrecheck() {
-    if (preBusy) return;
-    setPreBusy(true); setPreOpen(true);
-    try {
-      const d = await api('aiPrecheck', { artifact_id: artifact.artifact_id });
-      setPre(d);
-    } catch (e) { setPre({ light: '', text: '預檢暫時無法使用：' + e.message }); }
-    finally { setPreBusy(false); }
   }
 
   const isCourse = artifact.category === 'course_result';
@@ -1836,7 +1859,7 @@ function ArtifactPack({ artifact, summary, onSummaryChange, onChanged }) {
           return (
             <button key={st.val || 'none'} type="button" className={cls} disabled={!clickable}
               title={st.short}
-              onClick={() => { if (clickable) { setStatus(st.val); save({ is_uploaded_to_school: st.val }, '狀態已更新'); if (st.val === 'submitted') runPrecheck(); } }}>
+              onClick={() => { if (clickable) { setStatus(st.val); save({ is_uploaded_to_school: st.val }, '狀態已更新'); } }}>
               <span className="step-dot">{dot}</span>
               <span className="step-label">{st.label}</span>
             </button>
@@ -1847,26 +1870,6 @@ function ArtifactPack({ artifact, summary, onSummaryChange, onChanged }) {
       {status === 'editing' && <p className="step-cap warn">⚠️ 別停在「編輯中」！到校內平台按「送出認證」後，回來點「已送認證」。</p>}
       {status === 'submitted' && <p className="step-cap">✅ 已送出，等<b>老師在系統確認</b>後會自動變成「認證成功」。</p>}
       {status === 'certified' && <p className="step-cap ok">🎉 老師已確認「認證成功」！</p>}
-
-      {/* 第一關：AI 預檢（教練給燈號與建議；認證仍由老師決定） */}
-      {(status === 'submitted' || preOpen) && (
-        <div className="precheck">
-          {!pre && !preBusy && (
-            <button className="btn-sm" onClick={runPrecheck}>🔍 教練預檢報告</button>
-          )}
-          {preBusy && <p className="empty-hint">教練預檢中…（約 20–40 秒，內容沒改過會直接回上次結果）</p>}
-          {pre && (
-            <div className={'precheck-box light-' + (pre.light === '綠' ? 'g' : pre.light === '紅' ? 'r' : 'y')}>
-              <div className="precheck-head">
-                <span className="precheck-light">{pre.light === '綠' ? '🟢 綠燈' : pre.light === '紅' ? '🔴 紅燈' : '🟡 黃燈'}</span>
-                <span className="hint">預檢是送出前的建議，認證由老師決定</span>
-              </div>
-              <pre>{String(pre.text).replace(/^燈號[：:][^\n]*\n*/, '')}</pre>
-              <button className="btn-sm" disabled={preBusy} onClick={async () => { setPreBusy(true); try { const d = await api('aiPrecheck', { artifact_id: artifact.artifact_id, force: true }); setPre(d); } catch (e) {} finally { setPreBusy(false); } }}>↻ 內容改過了，重新預檢</button>
-            </div>
-          )}
-        </div>
-      )}
 
       <label className="central-toggle" title="是否已在校內平台把這件勾選送進中央資料庫（每學年課程成果 6 件、多元 10 件上限）">
         <input type="checkbox" checked={checked} disabled={busy}
@@ -1880,9 +1883,9 @@ function ArtifactPack({ artifact, summary, onSummaryChange, onChanged }) {
           <p><b>步驟 1・檔案</b>：{artifact.file_url
             ? <><a href={artifact.file_url} target="_blank" rel="noreferrer">開啟檔案</a>（下載後上傳到校內平台，已符合 4MB 規格）</>
             : '這件還沒有附件——可以先補上傳，或直接在校內平台貼文字。'}</p>
-          <p style={{ marginBottom: 4 }}><b>步驟 2・100 字簡述</b>（{summary.length}/100 字・與下方教練區同一份）：</p>
-          <textarea rows="3" value={summary} onChange={(e) => onSummaryChange(e.target.value)}
-            placeholder="還沒寫？先到下方教練區寫草稿、給教練健檢。" />
+          <p style={{ marginBottom: 4 }}><b>步驟 2・100 字簡述</b>（{summary.length}/100 字）：</p>
+          <textarea rows="3" value={summary} onChange={(e) => setSummary(e.target.value)}
+            placeholder="還沒寫？先按上面的「百字簡述健檢」讓教練幫你。" />
           <div className="coach-btns">
             <button className="btn-sm" disabled={busy} onClick={() => save({ summary_100: summary }, '簡述已儲存')}>儲存簡述</button>
             <button className="btn-sm" disabled={!summary} onClick={() => { navigator.clipboard.writeText(summary); setMsg('已複製，去校內平台貼上！'); }}>複製簡述</button>
@@ -1898,18 +1901,6 @@ function ArtifactPack({ artifact, summary, onSummaryChange, onChanged }) {
 }
 
 /* ============ 素材倉庫 ============ */
-
-/** 每件素材的工作區：summary_100 單一來源，上傳包與教練區共用（v27 合併技術債） */
-function ArtifactWork({ artifact }) {
-  const [summary, setSummary] = useState(artifact.summary_100 || '');
-  useEffect(() => { setSummary(artifact.summary_100 || ''); }, [artifact.artifact_id]);
-  return (
-    <>
-      <ArtifactPack artifact={artifact} summary={summary} onSummaryChange={setSummary} />
-      <ArtifactCoach artifact={artifact} summary={summary} onSummaryChange={setSummary} />
-    </>
-  );
-}
 
 function Artifacts({ student, autoOpen, onAutoOpenDone }) {
   const [list, setList] = useState(null);
@@ -1956,7 +1947,8 @@ function Artifacts({ student, autoOpen, onAutoOpenDone }) {
           <div className="a-meta">{a.semester}｜{a.subcategory}{a.subject_or_event ? `｜${a.subject_or_event}` : ''}</div>
           {a.quick_note && <p className="a-note">{a.quick_note}</p>}
           {a.file_url && <p className="a-note"><a href={a.file_url} target="_blank" rel="noreferrer">查看檔案</a>{a.file_size_mb ? `（${a.file_size_mb}MB）` : ''}</p>}
-          <ArtifactWork artifact={a} />
+          <ArtifactPack artifact={a} />
+          <ArtifactCoach artifact={a} />
           <button className="a-del" onClick={() => remove(a.artifact_id)}>刪除</button>
         </article>
       ))}
@@ -2179,18 +2171,9 @@ function TeacherCerts() {
       {rows.map((a) => (
         <div key={a.artifact_id} className="cert-row">
           <div className="cert-info">
-            <div className="cert-title">
-              {a.precheck_light && <span title="AI 預檢燈號（僅供參考，認證由你決定）">{a.precheck_light === '綠' ? '🟢' : a.precheck_light === '紅' ? '🔴' : '🟡'} </span>}
-              {a.title}
-            </div>
+            <div className="cert-title">{a.title}</div>
             <div className="cert-meta">{a.student_name}{a.class_group ? '（' + a.class_group + '）' : ''}・{a.category === 'course_result' ? '課程成果' : '多元表現'}{a.semester ? '・' + a.semester : ''}</div>
             {a.file_url && <a href={a.file_url} target="_blank" rel="noreferrer" className="cert-file">開啟檔案 →</a>}
-            {a.precheck_text && (
-              <details className="cert-pre">
-                <summary>AI 預檢摘要（第一關參考）</summary>
-                <pre>{String(a.precheck_text).replace(/^燈號[：:][^\n]*\n*/, '')}</pre>
-              </details>
-            )}
           </div>
           <button className="btn-sm" disabled={busyId === a.artifact_id} onClick={() => confirm(a)}>
             {busyId === a.artifact_id ? '確認中…' : '✓ 確認認證成功'}
@@ -2410,7 +2393,7 @@ function TeacherReminders() {
       {msg && <p className="ok-msg">{msg}</p>}
       {err && <p className="err">{err}</p>}
       <p className="hint" style={{ marginTop: 24 }}>
-         📊 LINE 免費額度：每月 200 則（50 人 × 4 次）。補發也會計入，請留意次數。
+        📊 LINE 免費額度：每月 200 則（50 人 × 4 次）。補發也會計入，請留意次數。
       </p>
     </>
   );
