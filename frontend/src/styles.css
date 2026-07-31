@@ -252,8 +252,9 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .step-cap { font-size: 0.8rem; color: var(--graphite); margin: 10px 0 4px; line-height: 1.5; }
 .step-cap.warn { color: var(--alert); font-weight: 600; }
 .step-cap.ok { color: #15703c; font-weight: 700; }
-.central-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 700; color: var(--ink); margin: 6px 0 2px; cursor: pointer; }
-.central-toggle input { flex-shrink: 0; }
+.central-toggle { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 700; color: var(--ink); margin: 8px 0 2px; cursor: pointer; }
+.central-toggle input { width: auto; flex-shrink: 0; }   /* 蓋掉全域 input{width:100%}，修直排字 */
+.central-toggle span { white-space: nowrap; }
 
 /* ---------- 教練區塊補充 ---------- */
 .coach-label { display: block; font-size: 0.8rem; font-weight: 800; color: var(--ink); margin: 12px 0 4px; }
@@ -300,6 +301,25 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 }
 .s2-total b { color: var(--mark); font-size: 1.2rem; }
 .s2-rules { font-size: 0.74rem; color: var(--graphite); line-height: 1.6; margin-top: 10px; }
+
+/* ---------- 備審組卷 ---------- */
+.s2-bundle { margin-top: 14px; border-top: 1.5px dashed var(--rule); padding-top: 12px; }
+.bnd-group { background: #fff; border: 1.5px solid var(--rule); border-radius: 10px; padding: 8px 12px; margin-bottom: 8px; }
+.bnd-label { font-size: 0.8rem; font-weight: 800; color: var(--ink); }
+.bnd-need { font-size: 0.7rem; font-weight: 700; color: var(--amber, #b06f00); background: #fce9c8; border-radius: 6px; padding: 1px 8px; margin-left: 8px; }
+.bnd-item { display: flex; align-items: flex-start; gap: 7px; font-size: 0.84rem; margin-top: 6px; cursor: pointer; }
+.bnd-item input { width: auto; flex-shrink: 0; margin-top: 3px; }
+.bnd-item small { color: var(--graphite); font-size: 0.72rem; }
+.bnd-none { font-size: 0.76rem; color: var(--graphite); margin-top: 4px; }
+.bnd-all { margin: 6px 0 2px; }
+.bnd-all summary { font-size: 0.8rem; font-weight: 700; color: var(--graphite); cursor: pointer; }
+.bnd-msg { font-size: 0.8rem; font-weight: 700; color: #15703c; }
+.bnd-card { background: #fff; border: 2px solid var(--ink); border-radius: 14px; padding: 12px 16px; margin: 12px 0; }
+.bnd-card-h { font-weight: 900; font-size: 0.95rem; margin-bottom: 6px; }
+.bnd-row { display: flex; align-items: baseline; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--rule); font-size: 0.86rem; flex-wrap: wrap; }
+.bnd-row:last-of-type { border-bottom: none; }
+.bnd-row-name { font-weight: 700; flex: 1 1 200px; }
+.bnd-row small { color: var(--graphite); font-size: 0.72rem; }
 
 /* ---------- 老師：待認證清單 ---------- */
 .cert-row { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1.5px solid var(--rule); border-radius: 12px; margin-bottom: 10px; background: #fff; }

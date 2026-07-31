@@ -838,7 +838,7 @@ function HsScreen({ student, last }) {
 
       {res && (
         <div className="tiers">
-          <p className="tiers-legend">由難到穩：<b>夢幻</b> › <b>適中</b> › <b>安全</b>　點標題可收合。過一階 ≠ 錄取，第二階段仍需準備。</p>
+          <p className="tiers-legend">由難到穩：<b>夢幻</b> › <b>適中</b> › <b>安全</b>　點標題可收合。<b>過一階 ≠ 錄取</b>——覺得過得了的校系，點卡片上的「🧮 二階試算」看第二階段總成績結構。</p>
           <input className="tier-filter" value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔎 篩選校名或系名（例：臺大、資工、設計）" />
           {fcols.map((col) => (
             <TierBand key={col.key} col={col} renderItem={(m, i) => (
@@ -967,7 +967,7 @@ function VtScreen({ student, last }) {
 
       {res && (
         <div className="tiers">
-          <p className="tiers-legend">由難到穩：<b>夢幻</b> › <b>適中</b> › <b>安全</b>　點標題可收合。過一階 ≠ 錄取，第二階段仍需準備。</p>
+          <p className="tiers-legend">由難到穩：<b>夢幻</b> › <b>適中</b> › <b>安全</b>　點標題可收合。<b>過一階 ≠ 錄取</b>——覺得過得了的校系，點卡片上的「🧮 二階試算」看第二階段總成績結構。</p>
           <input className="tier-filter" value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔎 篩選校名或系名（例：臺科大、機械、餐飲）" />
           {fcols.map((col) => (
             <TierBand key={col.key} col={col} renderItem={(m, i) => (
@@ -1015,9 +1015,13 @@ function Stage2Panel({ line, deptId, vtScores, onClose }) {
   const [err, setErr] = useState('');
   const [vals, setVals] = useState({});
   const [bonus, setBonus] = useState(0);
+  const [bundle, setBundle] = useState(null);   // 備審組卷
+  const [bSel, setBSel] = useState({});
+  const [bBusy, setBBusy] = useState(false);
+  const [bMsg, setBMsg] = useState('');
 
   useEffect(() => {
-    setData(null); setErr(''); setVals({}); setBonus(0);
+    setData(null); setErr(''); setVals({}); setBonus(0); setBundle(null); setBSel({}); setBMsg('');
     const payload = { dept_id: deptId };
     if (line === 'vt' && vtScores) payload.scores = vtScores;
     api(line === 'vt' ? 'stage2Vt' : 'stage2Hs', payload)
@@ -1028,6 +1032,26 @@ function Stage2Panel({ line, deptId, vtScores, onClose }) {
       })
       .catch((e) => setErr(e.message));
   }, [deptId, line]);
+
+  async function loadBundle() {
+    setBBusy(true); setBMsg('');
+    try {
+      const d = await api('bundleGet', { dept_id: deptId, line: line });
+      setBundle(d);
+      const sel = {}; (d.selected || []).forEach((id) => { sel[id] = true; });
+      setBSel(sel);
+    } catch (e) { setBMsg(e.message); }
+    setBBusy(false);
+  }
+  async function saveBundle() {
+    setBBusy(true); setBMsg('');
+    try {
+      const ids = Object.keys(bSel).filter((k) => bSel[k]);
+      const d = await api('bundleSave', { dept_id: deptId, line: line, school: data && data.school, dept: data && data.dept, selected: ids });
+      setBMsg('✓ 已儲存：課程 ' + d.course + ' 件＋多元 ' + d.diverse + ' 件');
+    } catch (e) { setBMsg(e.message); }
+    setBBusy(false);
+  }
 
   if (!deptId) return null;
   const fixedPct = data ? (line === 'vt' ? data.utPct : data.gsatPct) : 0;
@@ -1104,6 +1128,42 @@ function Stage2Panel({ line, deptId, vtScores, onClose }) {
                   ? <>試算總成績：<b>{Math.round(grand * 100) / 100}</b> / 100{bonus > 0 && <span className="s2-sub">（含加分 ×{1 + bonus / 100}）</span>}</>
                   : <>指定項目部分合計：<b>{Math.round(itemEarned * 100) / 100}</b> / {100 - fixedPct}</>)
                 : <>指定項目部分合計：<b>{Math.round(itemEarned * 100) / 100}</b> / {100 - fixedPct}</>}
+            </div>
+
+            {/* 備審組卷：素材 ↔ 這個校系 */}
+            <div className="s2-bundle">
+              {!bundle && <button className="btn-sm" disabled={bBusy} onClick={loadBundle}>{bBusy ? '讀取素材倉庫…' : '📦 挑選要交的素材（備審組卷）'}</button>}
+              {bundle && (() => {
+                const byId = {}; (bundle.artifacts || []).forEach((a) => { byId[a.artifact_id] = a; });
+                const selCount = Object.keys(bSel).filter((k) => bSel[k]).length;
+                const item = (id) => byId[id] && (
+                  <label key={id} className="bnd-item">
+                    <input type="checkbox" checked={!!bSel[id]} onChange={() => setBSel(Object.assign({}, bSel, { [id]: !bSel[id] }))} />
+                    <span>{byId[id].title}<small>　{byId[id].semester}{byId[id].subcategory ? '・' + byId[id].subcategory : ''}</small></span>
+                  </label>);
+                return (
+                  <>
+                    <div className="s2-ctrl-head">📦 為這系挑素材（已選 {selCount} 件）——教練建議的對應分組：</div>
+                    {(bundle.groups || []).map((g, gi) => (
+                      <div key={gi} className="bnd-group">
+                        <div className="bnd-label">{g.label}{g.need && <span className="bnd-need">{g.need}</span>}</div>
+                        {(g.ids || []).map(item)}
+                        {(!g.ids || !g.ids.length) && !g.need && <div className="bnd-none">倉庫裡還沒有對應素材——先去素材倉庫累積</div>}
+                      </div>
+                    ))}
+                    <details className="bnd-all">
+                      <summary>全部素材（不受分組限制，自由挑）</summary>
+                      {(bundle.artifacts || []).map((a) => item(a.artifact_id))}
+                      {!(bundle.artifacts || []).length && <div className="bnd-none">素材倉庫是空的——快去存第一件！</div>}
+                    </details>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
+                      <button className="btn-sm" disabled={bBusy} onClick={saveBundle}>💾 儲存這個組合</button>
+                      {bMsg && <span className="bnd-msg">{bMsg}</span>}
+                    </div>
+                    <p className="hint" style={{ marginTop: 6 }}>分組是關鍵字輔助建議，實際以簡章為準；存好的組合會出現在「總覽」。</p>
+                  </>
+                );
+              })()}
             </div>
 
             <div className="s2-rules">
@@ -1743,6 +1803,26 @@ function Login({ onDone }) {
 
 /* ============ 總覽：三年學期格子 ============ */
 
+/* 總覽：我的備審組合（有存過才顯示） */
+function BundleOverview() {
+  const [rows, setRows] = useState(null);
+  useEffect(() => { api('bundleList').then(setRows).catch(() => setRows([])); }, []);
+  if (!rows || !rows.length) return null;
+  return (
+    <div className="bnd-card">
+      <div className="bnd-card-h">📦 我的備審組合</div>
+      {rows.slice(0, 6).map((b, i) => (
+        <div key={i} className="bnd-row">
+          <span className="bnd-row-name">{b.school} {b.dept}</span>
+          <b>{b.course + b.diverse} 件</b>
+          <small>課程 {b.course}・多元 {b.diverse}</small>
+        </div>
+      ))}
+      <p className="hint" style={{ margin: '6px 0 0' }}>到「落點 → 一階結果 → 🧮 二階試算」可調整每個校系的組合。</p>
+    </div>
+  );
+}
+
 function Dashboard({ student, onQuickAdd }) {
   const [data, setData] = useState(null);
   const [err, setErr] = useState('');
@@ -1761,6 +1841,7 @@ function Dashboard({ student, onQuickAdd }) {
     <>
       <button className="btn cta-big" onClick={() => onQuickAdd()}>📸 快拍存素材（存到本學期）</button>
       <p className="hint" style={{ marginTop: -8 }}>你的學制：<b className="hl">{voc ? '技術型高中（技高）' : '普通型高中（普高）'}</b>——本頁的額度、指引、按鈕都是你的學制專屬版本。</p>
+      <BundleOverview />
 
       <h2>三年進度 <span className="hl">共 {data.total} 件素材</span></h2>
       {[0, 1, 2].map((y) => {
