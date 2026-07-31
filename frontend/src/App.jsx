@@ -757,7 +757,7 @@ const TW_SUBS = ['國', '英', '數A', '數B', '社', '自'];
 const PL_FLD = { width: '100%', padding: '9px 11px', border: '1.5px solid #d9d9d2', borderRadius: 8, fontSize: '.95rem', fontFamily: 'inherit', background: '#f7f7f4', color: '#16233b' };
 const PL_BTN = { background: '#16233b', color: '#f7f7f4', border: 'none', borderRadius: 10, padding: '11px 22px', fontWeight: 800, cursor: 'pointer' };
 
-function HsScreen({ student }) {
+function HsScreen({ student, last }) {
   const [scores, setScores] = useState({});
   const [clusters, setClusters] = useState([]);
   const [mode, setMode] = useState('sim');
@@ -765,6 +765,16 @@ function HsScreen({ student }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [s2, setS2] = useState(null);   // 二階試算面板（dept_id）
+  const [fromLast, setFromLast] = useState(false);
+  useEffect(() => {
+    if (!last || fromLast) return;
+    if (Object.keys(scores).length) { setFromLast(true); return; }   // 已手動輸入就不覆蓋
+    let any = false;
+    if (last.scores && Object.keys(last.scores).length) { const s = {}; Object.keys(last.scores).forEach((k) => { s[k] = String(last.scores[k]); }); setScores(s); any = true; }
+    if (Array.isArray(last.clusters) && last.clusters.length) { setClusters(last.clusters); any = true; }
+    if (last.mode) setMode(last.mode);
+    setFromLast(any);
+  }, [last]);
   const setScore = (k, v) => setScores(Object.assign({}, scores, { [k]: v }));
   function toggleCluster(c) { const cur = clusters.slice(); const i = cur.indexOf(c); if (i >= 0) cur.splice(i, 1); else cur.push(c); setClusters(cur); }
   async function run() {
@@ -785,6 +795,7 @@ function HsScreen({ student }) {
   return (
     <div>
       <p style={{ color: '#5a6378', fontSize: '.9rem' }}>個人申請「<b>第一階段</b>」過篩難易推估：先看<b>檢定門檻</b>（各科最低標級），再用各校系去年「各篩選順序的通過最低級分」逐段比對，分成夢幻／適中／安全。<b>過一階 ≠ 錄取</b>；第二階段（書審／面試）另需準備。</p>
+      {fromLast && <p className="hint" style={{ marginTop: 2 }}>↺ 已幫你帶入上次輸入的成績，可直接修改再分析。</p>}
 
       <div style={{ display: 'inline-flex', border: '2px solid #16233b', borderRadius: 999, overflow: 'hidden', margin: '6px 0 12px' }}>
         <button onClick={() => setMode('sim')} style={{ border: 'none', padding: '7px 16px', fontWeight: 800, cursor: 'pointer', background: mode === 'sim' ? '#16233b' : '#fff', color: mode === 'sim' ? '#fff' : '#16233b' }}>模擬級分</button>
@@ -882,7 +893,7 @@ const VT_GROUPS = ['01-機械群', '02-動力機械群', '03-電機與電子群�
 const VT_SUBS = ['國', '英', '數', '專一', '專二'];
 const VT_SUBLABEL = { '國': '國文', '英': '英文', '數': '數學', '專一': '專業一', '專二': '專業二' };
 
-function VtScreen({ student }) {
+function VtScreen({ student, last }) {
   const [scores, setScores] = useState({});
   const [group, setGroup] = useState('');
   const [mode, setMode] = useState('sim');
@@ -890,6 +901,16 @@ function VtScreen({ student }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [s2, setS2] = useState(null);   // 二階試算面板（dept_id）
+  const [fromLast, setFromLast] = useState(false);
+  useEffect(() => {
+    if (!last || fromLast) return;
+    if (Object.keys(scores).length) { setFromLast(true); return; }   // 已手動輸入就不覆蓋
+    let any = false;
+    if (last.scores && Object.keys(last.scores).length) { const s = {}; Object.keys(last.scores).forEach((k) => { s[k] = String(last.scores[k]); }); setScores(s); any = true; }
+    if (last.group) { setGroup(last.group); any = true; }
+    if (last.mode) setMode(last.mode);
+    setFromLast(any);
+  }, [last]);
   const setScore = (k, v) => setScores(Object.assign({}, scores, { [k]: v }));
   async function run() {
     if (!group) { setErr('請先選擇你的統測群類'); return; }
@@ -910,6 +931,7 @@ function VtScreen({ student }) {
   return (
     <div>
       <p style={{ color: '#5a6378', fontSize: '.9rem' }}>四技二專甄選入學「<b>第一階段統測倍率篩選</b>」過篩難易推估。選你的統測群、輸入五科級分（可先用模擬級分規劃），系統以各校系去年「各篩選順序的通過標準」逐段比對。<b>過一階 ≠ 錄取</b>；第二階段指定項目甄試（備審／面試／實作）另需準備。</p>
+      {fromLast && <p className="hint" style={{ marginTop: 2 }}>↺ 已幫你帶入上次輸入的成績，可直接修改再分析。</p>}
 
       <div style={{ display: 'inline-flex', border: '2px solid #16233b', borderRadius: 999, overflow: 'hidden', margin: '6px 0 12px' }}>
         <button onClick={() => setMode('sim')} style={{ border: 'none', padding: '7px 16px', fontWeight: 800, cursor: 'pointer', background: mode === 'sim' ? '#16233b' : '#fff', color: mode === 'sim' ? '#fff' : '#16233b' }}>模擬級分</button>
@@ -1169,13 +1191,22 @@ function DispatchTiers({ res, q, setQ }) {
 }
 
 /* ---- 技高：分發入學區塊 ---- */
-function VtDispatch({ student }) {
+function VtDispatch({ student, last }) {
   const [scores, setScores] = useState({});
   const [group, setGroup] = useState('');
   const [res, setRes] = useState(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [q, setQ] = useState('');
+  const [fromLast, setFromLast] = useState(false);
+  useEffect(() => {
+    if (!last || fromLast) return;
+    if (Object.keys(scores).length) { setFromLast(true); return; }   // 已手動輸入就不覆蓋
+    let any = false;
+    if (last.scores && Object.keys(last.scores).length) { const s = {}; Object.keys(last.scores).forEach((k) => { s[k] = String(last.scores[k]); }); setScores(s); any = true; }
+    if (last.group) { setGroup(last.group); any = true; }
+    setFromLast(any);
+  }, [last]);
   const setScore = (k, v) => setScores(Object.assign({}, scores, { [k]: v }));
   async function run() {
     if (!group) { setErr('請先選擇你的統測群類'); return; }
@@ -1187,6 +1218,7 @@ function VtDispatch({ student }) {
   return (
     <div>
       <p style={{ color: '#5a6378', fontSize: '.9rem' }}>四技二專「<b>聯合登記分發</b>」推估：輸入統測五科<b>原始分數（0–100）</b>，系統用<b>每個校系自己的加權</b>（國英數×1~2、專業×2~3）算你的總分，和去年最低錄取總分比對。<b>選填志願前的最後一關</b>，記得衝穩保都要填。</p>
+      {fromLast && <p className="hint" style={{ marginTop: 2 }}>↺ 已幫你帶入上次輸入的成績，可直接修改再分析。</p>}
       <div style={{ marginBottom: 10 }}>
         <div style={{ fontSize: '.82rem', color: '#5a6378', fontWeight: 700, marginBottom: 4 }}>你的統測群類</div>
         <select value={group} onChange={(e) => setGroup(e.target.value)} style={PL_FLD}>
@@ -1213,12 +1245,20 @@ function VtDispatch({ student }) {
 /* ---- 高中：考試分發區塊 ---- */
 const HS_GSAT = ['國', '英', '數A', '數B', '社', '自'];
 const HS_AST = ['數甲', '數乙', '歷', '地', '公', '物', '化', '生'];
-function HsDispatch({ student }) {
+function HsDispatch({ student, last }) {
   const [scores, setScores] = useState({});
   const [res, setRes] = useState(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [q, setQ] = useState('');
+  const [fromLast, setFromLast] = useState(false);
+  useEffect(() => {
+    if (!last || fromLast) return;
+    if (Object.keys(scores).length) { setFromLast(true); return; }   // 已手動輸入就不覆蓋
+    let any = false;
+    if (last.scores && Object.keys(last.scores).length) { const s = {}; Object.keys(last.scores).forEach((k) => { s[k] = String(last.scores[k]); }); setScores(s); any = true; }
+    setFromLast(any);
+  }, [last]);
   const setScore = (k, v) => setScores(Object.assign({}, scores, { [k]: v }));
   async function run() {
     const filled = {};
@@ -1242,6 +1282,7 @@ function HsDispatch({ student }) {
   return (
     <div>
       <p style={{ color: '#5a6378', fontSize: '.9rem' }}>大學「<b>考試分發</b>」推估：全部成績以 <b>60 級分制</b>輸入，系統用各校系採計組合與加權算總分、比對去年最低錄取分數。只填有考的科目即可——填越多科，能比對的校系越多。</p>
+      {fromLast && <p className="hint" style={{ marginTop: 2 }}>↺ 已幫你帶入上次輸入的成績，可直接修改再分析。</p>}
       <div style={{ fontSize: '.82rem', color: '#5a6378', fontWeight: 700, margin: '10px 0 4px' }}>學測科目（請填<a href="https://www.uac.edu.tw/" target="_blank" rel="noreferrer">大考中心官方換算後</a>的 60 級分，不是 15 級分×4）</div>
       {grid(HS_GSAT)}
       <div style={{ fontSize: '.82rem', color: '#5a6378', fontWeight: 700, margin: '12px 0 4px' }}>分科測驗科目（直接填 60 級分）</div>
@@ -1262,21 +1303,25 @@ function HsDispatch({ student }) {
 /* ---- 對外元件：落點頁（管道分頁籤包裝） ---- */
 function Placement({ student }) {
   const [chan, setChan] = useState('screen');
+  const [last, setLast] = useState(null);      // 上次輸入（自動帶回）
+  useEffect(() => { api('placementLast').then(setLast).catch(() => setLast({})); }, []);
   return (
     <div style={{ padding: '10px 4px 90px' }}>
       <h2 style={{ margin: '4px 0 10px' }}>落點分析</h2>
       <ChanTabs chan={chan} setChan={setChan} labels={['個人申請（一階篩選）', '考試分發（分科）']} />
-      {chan === 'screen' ? <HsScreen student={student} /> : <HsDispatch student={student} />}
+      {chan === 'screen' ? <HsScreen student={student} last={last && last.placement} /> : <HsDispatch student={student} last={last && last.dispatchHs} />}
     </div>
   );
 }
 function VtPlacement({ student }) {
   const [chan, setChan] = useState('screen');
+  const [last, setLast] = useState(null);
+  useEffect(() => { api('placementLast').then(setLast).catch(() => setLast({})); }, []);
   return (
     <div style={{ padding: '10px 4px 90px' }}>
       <h2 style={{ margin: '4px 0 10px' }}>落點分析<span style={{ fontSize: '.8rem', color: '#5a6378', fontWeight: 600, marginLeft: 6 }}>技高・四技二專</span></h2>
       <ChanTabs chan={chan} setChan={setChan} labels={['甄選入學（一階篩選）', '分發入學（登記分發）']} />
-      {chan === 'screen' ? <VtScreen student={student} /> : <VtDispatch student={student} />}
+      {chan === 'screen' ? <VtScreen student={student} last={last && last.placementVt} /> : <VtDispatch student={student} last={last && last.dispatchVt} />}
     </div>
   );
 }
