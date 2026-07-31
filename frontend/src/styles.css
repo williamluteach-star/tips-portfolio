@@ -14,7 +14,7 @@
   --alert: #c93a2e;
   --rule: #e3e1da;
   --radius: 10px;
-  --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+  --font-body: 'Noto Sans TC', system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', monospace;
 }
 
@@ -52,20 +52,14 @@ h2 { font-size: 1.05rem; font-weight: 900; margin: 28px 0 12px; }
 /* ---------- 登入頁 ---------- */
 .login-wrap { flex: 1; display: grid; place-items: center; padding: 24px; }
 .login-card { width: 100%; max-width: 360px; }
+/* 註冊表單雙欄（桌機）：卡片放寬、欄位排橫 */
+.login-card:has(.form-grid2) { max-width: 560px; }
+.form-grid2 { display: grid; grid-template-columns: 1fr 1fr; column-gap: 16px; }
+.form-grid2 label { margin-top: 12px; }
+.fld-hint { font-size: 0.7rem; color: var(--graphite); margin-top: 4px; line-height: 1.45; }
+@media (max-width: 560px) { .form-grid2 { grid-template-columns: 1fr; } .login-card:has(.form-grid2) { max-width: 360px; } }
 .login-card h1 { font-size: 1.7rem; font-weight: 900; line-height: 1.3; margin-bottom: 6px; }
 .login-card p.sub { color: var(--graphite); font-size: 0.9rem; margin-bottom: 28px; }
-
-/* 註冊頁：桌機兩欄橫向，登入入口置頂 */
-.login-card--wide { max-width: 680px; }
-.signup-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.signup-head h1 { margin-bottom: 0; }
-.signup-head .btn-sm { flex-shrink: 0; }
-.form-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 22px; align-items: start; }
-.form-grid .ff > label:first-child { margin-top: 14px; }
-@media (max-width: 640px) {
-  .login-card--wide { max-width: 360px; }
-  .form-grid { grid-template-columns: 1fr; }
-}
 
 /* ---------- 表單 ---------- */
 label { display: block; font-size: 0.82rem; font-weight: 700; margin: 14px 0 6px; }
@@ -259,14 +253,53 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .step-cap.warn { color: var(--alert); font-weight: 600; }
 .step-cap.ok { color: #15703c; font-weight: 700; }
 .central-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 700; color: var(--ink); margin: 6px 0 2px; cursor: pointer; }
-.central-toggle input { width: auto; flex-shrink: 0; }
-.central-toggle span { white-space: nowrap; }
+.central-toggle input { flex-shrink: 0; }
 
 /* ---------- 教練區塊補充 ---------- */
 .coach-label { display: block; font-size: 0.8rem; font-weight: 800; color: var(--ink); margin: 12px 0 4px; }
 .coach-ta { width: 100%; border: 1.5px solid var(--rule); border-radius: 8px; padding: 8px 10px; font-family: var(--font-body); font-size: 0.9rem; }
 .coach-sum-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
 .coach-quota { font-size: 0.74rem; color: var(--graphite); }
+
+/* ---------- 二階總成績試算 ---------- */
+.s2-btn {
+  display: inline-block; margin-top: 8px; background: #eef2fb; border: 1.5px solid #16233b;
+  color: #16233b; border-radius: 999px; padding: 4px 12px; font: inherit; font-size: 0.76rem;
+  font-weight: 800; cursor: pointer;
+}
+.s2-btn:hover { background: var(--mark); }
+.s2-overlay {
+  position: fixed; inset: 0; background: rgba(22, 35, 59, 0.55); z-index: 50;
+  display: grid; place-items: center; padding: 16px; overflow-y: auto;
+}
+.s2-card {
+  background: var(--paper); border-radius: 16px; padding: 20px 22px; width: 100%;
+  max-width: 520px; max-height: 88dvh; overflow-y: auto; position: relative;
+  border: 2px solid var(--ink);
+}
+.s2-close {
+  position: absolute; top: 10px; right: 12px; background: none; border: none;
+  font-size: 1.1rem; font-weight: 800; color: var(--graphite); cursor: pointer;
+}
+.s2-bar { display: flex; height: 22px; border-radius: 8px; overflow: hidden; border: 1.5px solid var(--ink); }
+.s2-bar div { height: 100%; }
+.s2-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 8px 0 12px; font-size: 0.76rem; font-weight: 700; color: var(--ink); }
+.s2-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; }
+.s2-fixed { background: #fff; border: 1.5px solid var(--rule); border-radius: 10px; padding: 10px 12px; font-size: 0.88rem; }
+.s2-sub { font-size: 0.74rem; color: var(--graphite); margin-left: 6px; }
+.s2-ctrl-head { font-size: 0.85rem; font-weight: 800; color: var(--ink); margin: 14px 0 6px; }
+.s2-item { background: #fff; border: 1.5px solid var(--rule); border-radius: 10px; padding: 8px 12px 10px; margin-bottom: 8px; }
+.s2-item-head { display: flex; justify-content: space-between; font-size: 0.82rem; font-weight: 700; margin-bottom: 2px; }
+.s2-item-head .warn { color: var(--alert); }
+.s2-item input[type="range"] { width: 100%; accent-color: #16233b; }
+.s2-warn { font-size: 0.74rem; color: var(--alert); font-weight: 700; }
+.s2-bonus { font-size: 0.82rem; font-weight: 700; margin: 10px 0 4px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.s2-total {
+  background: var(--ink); color: var(--paper); border-radius: 10px; padding: 10px 14px;
+  font-size: 0.95rem; margin-top: 10px;
+}
+.s2-total b { color: var(--mark); font-size: 1.2rem; }
+.s2-rules { font-size: 0.74rem; color: var(--graphite); line-height: 1.6; margin-top: 10px; }
 
 /* ---------- 老師：待認證清單 ---------- */
 .cert-row { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1.5px solid var(--rule); border-radius: 12px; margin-bottom: 10px; background: #fff; }
@@ -416,31 +449,3 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
   .sem-cell2 { border-left: none; border-top: 1.5px solid var(--rule); }
   .sem-cell2:first-child { border-top: none; }
 }
-
-/* ---------- 對話教練（v28） ---------- */
-.coach-chat { margin-top: 12px; }
-.chat-log {
-  margin-top: 8px; background: #fff; border: 1.5px solid var(--rule); border-radius: 10px;
-  padding: 10px 12px; max-height: 320px; overflow-y: auto;
-  display: flex; flex-direction: column; gap: 8px;
-}
-.chat-b { max-width: 85%; padding: 8px 12px; border-radius: 12px; font-size: 0.9rem; line-height: 1.55; white-space: pre-wrap; }
-.chat-me { align-self: flex-end; background: var(--ink); color: var(--paper); border-bottom-right-radius: 4px; }
-.chat-coach { align-self: flex-start; background: #f1f3f7; color: var(--ink); border-bottom-left-radius: 4px; }
-.chat-row { display: flex; gap: 8px; margin-top: 8px; align-items: flex-end; }
-.chat-row textarea { flex: 1; border: 1.5px solid var(--rule); border-radius: 10px; padding: 8px 10px; font-family: var(--font-body); font-size: 0.9rem; }
-.chat-row .btn-sm { flex-shrink: 0; margin-bottom: 2px; }
-
-
-/* ---------- AI 預檢（v29 第一關） ---------- */
-.precheck { margin: 8px 0 4px; }
-.precheck-box { background: #fff; border: 1.5px solid var(--rule); border-left-width: 5px; border-radius: 10px; padding: 10px 14px; margin-top: 6px; }
-.precheck-box.light-g { border-left-color: #15703c; }
-.precheck-box.light-y { border-left-color: #b58900; }
-.precheck-box.light-r { border-left-color: #b3261e; }
-.precheck-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
-.precheck-light { font-weight: 900; }
-.precheck-box pre { white-space: pre-wrap; font-family: var(--font-body); font-size: 0.88rem; line-height: 1.6; margin: 6px 0 10px; }
-.cert-pre { margin-top: 6px; font-size: 0.85rem; }
-.cert-pre summary { cursor: pointer; font-weight: 700; color: #2a3a5c; }
-.cert-pre pre { white-space: pre-wrap; font-family: var(--font-body); font-size: 0.84rem; line-height: 1.6; background: #f7f7f4; border-radius: 8px; padding: 8px 10px; margin-top: 6px; }

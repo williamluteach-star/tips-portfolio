@@ -764,6 +764,7 @@ function HsScreen({ student }) {
   const [res, setRes] = useState(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [s2, setS2] = useState(null);   // 二階試算面板（dept_id）
   const setScore = (k, v) => setScores(Object.assign({}, scores, { [k]: v }));
   function toggleCluster(c) { const cur = clusters.slice(); const i = cur.indexOf(c); if (i >= 0) cur.splice(i, 1); else cur.push(c); setClusters(cur); }
   async function run() {
@@ -855,6 +856,7 @@ function HsScreen({ student }) {
                 )}
                 {m.check && <div style={{ fontSize: '.72rem', color: '#8a94a6', marginTop: 3 }}>檢定門檻：{m.check}</div>}
                 {m.partial && <div style={{ color: '#b06f00', fontSize: '.72rem', marginTop: 3 }}>＊部分關卡因缺對應科成績未計入</div>}
+                {m.dept_id && <button className="s2-btn" onClick={() => setS2(m.dept_id)}>🧮 過一階後？二階試算</button>}
               </div>
             )} />
           ))}
@@ -863,6 +865,7 @@ function HsScreen({ student }) {
       )}
 
       {res && <CoachPanel cols={cols} schoolType="general" />}
+      {s2 && <Stage2Panel line="hs" deptId={s2} onClose={() => setS2(null)} />}
 
       {res && (
         <p style={{ fontSize: '.76rem', color: '#5a6378', marginTop: 14 }}>
@@ -886,6 +889,7 @@ function VtScreen({ student }) {
   const [res, setRes] = useState(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [s2, setS2] = useState(null);   // 二階試算面板（dept_id）
   const setScore = (k, v) => setScores(Object.assign({}, scores, { [k]: v }));
   async function run() {
     if (!group) { setErr('請先選擇你的統測群類'); return; }
@@ -962,6 +966,7 @@ function VtScreen({ student }) {
                   </div>
                 )}
                 {m.partial && <div style={{ color: '#b06f00', fontSize: '.72rem', marginTop: 3 }}>＊部分關卡因缺對應科成績未計入</div>}
+                {m.dept_id && <button className="s2-btn" onClick={() => setS2(m.dept_id)}>🧮 過一階後？二階試算</button>}
               </div>
             )} />
           ))}
@@ -970,12 +975,123 @@ function VtScreen({ student }) {
       )}
 
       {res && <CoachPanel cols={cols} schoolType="vocational" />}
+      {s2 && <Stage2Panel line="vt" deptId={s2} vtScores={scores} onClose={() => setS2(null)} />}
 
       {res && (
         <p style={{ fontSize: '.76rem', color: '#5a6378', marginTop: 14 }}>
           {res.note}<br />{res.source}
         </p>
       )}
+    </div>
+  );
+}
+
+/* ============ 二階總成績試算（甄選過一階之後） ============ */
+
+function Stage2Panel({ line, deptId, vtScores, onClose }) {
+  const [data, setData] = useState(null);
+  const [err, setErr] = useState('');
+  const [vals, setVals] = useState({});
+  const [bonus, setBonus] = useState(0);
+
+  useEffect(() => {
+    setData(null); setErr(''); setVals({}); setBonus(0);
+    const payload = { dept_id: deptId };
+    if (line === 'vt' && vtScores) payload.scores = vtScores;
+    api(line === 'vt' ? 'stage2Vt' : 'stage2Hs', payload)
+      .then((d) => {
+        setData(d);
+        const v = {}; (d.items || []).forEach((it) => { v[it.name] = 75; });
+        setVals(v);
+      })
+      .catch((e) => setErr(e.message));
+  }, [deptId, line]);
+
+  if (!deptId) return null;
+  const fixedPct = data ? (line === 'vt' ? data.utPct : data.gsatPct) : 0;
+  const items = (data && data.items) || [];
+  const itemEarned = items.reduce((s, it) => s + (Number(vals[it.name]) || 0) * it.pct / 100, 0);
+  const utEarned = data && data.utEarned != null ? data.utEarned : null;
+  const total = utEarned != null ? utEarned + itemEarned : null;
+  const grand = total != null ? total * (1 + bonus / 100) : null;
+  const COLORS = ['#16233b', '#3d5a80', '#b06f00', '#15703c', '#8e1f34', '#5a6378'];
+
+  return (
+    <div className="s2-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="s2-card">
+        <button className="s2-close" onClick={onClose}>✕</button>
+        {err && <p className="err">{err}</p>}
+        {!data && !err && <p className="empty-hint">載入二階資料中…</p>}
+        {data && (
+          <>
+            <h3 style={{ margin: '0 0 2px' }}>{data.school} {data.dept}</h3>
+            <p style={{ fontSize: '.8rem', color: '#5a6378', margin: '0 0 10px' }}>甄選總成績結構（{data.year} 學年簡章）——過一階後，比的就是這個。</p>
+
+            {/* 占比條 */}
+            <div className="s2-bar">
+              <div style={{ width: fixedPct + '%', background: COLORS[0] }} title={(line === 'vt' ? '統測 ' : '學測 ') + fixedPct + '%'} />
+              {items.map((it, i) => <div key={it.name} style={{ width: it.pct + '%', background: COLORS[(i + 1) % COLORS.length] }} title={it.name + ' ' + it.pct + '%'} />)}
+            </div>
+            <div className="s2-legend">
+              <span><i style={{ background: COLORS[0] }} />{line === 'vt' ? '統測' : '學測'} {fixedPct}%</span>
+              {items.map((it, i) => <span key={it.name}><i style={{ background: COLORS[(i + 1) % COLORS.length] }} />{it.name} {it.pct}%</span>)}
+            </div>
+
+            {/* 成績已定的部分 */}
+            <div className="s2-fixed">
+              {line === 'vt' ? (
+                data.utEarned != null
+                  ? <>統測部分（{data.utPct}%）：你已拿 <b>{data.utEarned}</b> 分<span className="s2-sub">（加權換算 {data.utScorePct}／100 × {data.utPct}%）</span></>
+                  : <>統測部分（{data.utPct}%）：在「甄選一階」輸入五科級分後，這裡會自動算出你已拿的分數。</>
+              ) : (
+                <>學測部分（{data.gsatPct}%）：由你的學測成績與該系採計組合決定——這部分考完就固定了。</>
+              )}
+            </div>
+
+            {/* 你還能掌控的 */}
+            <div className="s2-ctrl-head">你還能掌控的 {100 - fixedPct}%——拉滑桿試算：</div>
+            {items.map((it) => {
+              const v = Number(vals[it.name]) || 0;
+              const belowMin = it.min != null && v < it.min;
+              return (
+                <div key={it.name} className="s2-item">
+                  <div className="s2-item-head">
+                    <span>{it.name}（{it.pct}%）</span>
+                    <span className={belowMin ? 'warn' : ''}>{v} 分{it.min != null ? `｜最低門檻 ${it.min}` : ''}</span>
+                  </div>
+                  <input type="range" min="0" max="100" value={v}
+                    onChange={(e) => setVals(Object.assign({}, vals, { [it.name]: Number(e.target.value) }))} />
+                  {belowMin && <div className="s2-warn">⚠️ 低於該項最低得分，未達可能不予錄取</div>}
+                </div>
+              );
+            })}
+
+            {/* 加分與總分 */}
+            {line === 'vt' && (
+              <div className="s2-bonus">
+                證照/得獎加分：
+                {[[0, '無'], [5, '丙級 +5%'], [15, '乙級 +15%'], [25, '甲級 +25%']].map(([b, lb]) => (
+                  <button key={b} className={'chip' + (bonus === b ? ' on' : '')} onClick={() => setBonus(b)}>{lb}</button>
+                ))}
+                <div className="s2-sub" style={{ marginTop: 4 }}>依簡章：丙+5%／乙+15%／甲+25%，部分校系不予加分，以簡章為準。</div>
+              </div>
+            )}
+            <div className="s2-total">
+              {line === 'vt'
+                ? (total != null
+                  ? <>試算總成績：<b>{Math.round(grand * 100) / 100}</b> / 100{bonus > 0 && <span className="s2-sub">（含加分 ×{1 + bonus / 100}）</span>}</>
+                  : <>指定項目部分合計：<b>{Math.round(itemEarned * 100) / 100}</b> / {100 - fixedPct}</>)
+                : <>指定項目部分合計：<b>{Math.round(itemEarned * 100) / 100}</b> / {100 - fixedPct}</>}
+            </div>
+
+            <div className="s2-rules">
+              <b>二階硬規則提醒：</b>備審資料上傳<b>一經確認不得修改</b>；各校可自訂<b>比公告更早</b>的上傳/繳費截止；
+              {line === 'vt' ? '正備取後還要在期限內「登記就讀志願序」才會被分發，沒登記＝放棄。' : '正備取後記得依甄選會期程完成就讀志願序登記。'}
+              　此為結構試算，非錄取保證；備審與面試分數由各校評定。
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -1448,8 +1564,11 @@ function Login({ onDone }) {
               <div style={{ fontSize: 12.5, opacity: .85, marginTop: 2 }}>統測・四技二專<br />甄選入學</div>
             </div>
           </div>
-          <button className="btn-sm" style={{ marginTop: 18 }} onClick={() => { setEntry('hs'); setMode('login'); }}>已有帳號，請登入 →</button>
-          <button className="btn-sm" style={{ marginTop: 8 }} onClick={() => { window.location.search = '?m=us'; }}>美國升學？前往英文版 →</button>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 20 }}>
+            <button className="btn-sm" onClick={() => { setEntry('any'); setMode('login'); }}>已有帳號，請登入 →</button>
+            <button className="btn-sm" onClick={() => { window.location.search = '?m=us'; }}>美國升學？前往英文版 →</button>
+          </div>
+          <p style={{ fontSize: '.74rem', color: '#5a6378', marginTop: 8 }}>登入不用選線——帳號會記得你是高中還是技高。</p>
         </div>
       </div>
     );
@@ -1481,43 +1600,70 @@ function Login({ onDone }) {
             <div style={{ fontSize: '.72rem', color: '#5a6378', marginTop: 4 }}>{lt('登入後可讓瀏覽器記住帳號密碼，下次自動帶入。', 'Let your browser save these to sign in faster next time.')}</div>
             <button className="btn" type="submit" disabled={busy} style={{ marginTop: 12 }}>{busy ? lt('登入中…', 'Signing in…') : lt('登入', 'Log in')}</button>
             {err && <p className="err">{err}</p>}
-            <button type="button" className="btn-sm" style={{ marginTop: 14 }} onClick={() => { setErr(''); setMode('signup'); }}>{lt('還沒有帳號？免費註冊 →', 'New here? Sign up free →')}</button>
+            <button type="button" className="btn-sm" style={{ marginTop: 14 }} onClick={() => { setErr(''); if (!isUS && entry === 'any') { setEntry(null); } setMode('signup'); }}>{lt('還沒有帳號？免費註冊 →', 'New here? Sign up free →')}</button>
           </form>
         )}
 
         {mode === 'signup' && (
           <form onSubmit={signup} autoComplete="on">
             <h1>{lt('學生免費註冊', 'Sign up free 👋')}</h1>
-            <p className="sub">{lt('建立帳號，開始把作品一路存下來。免費、免信用卡。', 'Create your account and capture the real work over four years. No credit card.')}</p>
-            <label htmlFor="su-name">{lt('學生姓名', 'Student’s name')}</label>
-            <input id="su-name" name="name" value={name} onChange={(e) => setName(e.target.value)} placeholder={lt('例：陳小明', 'e.g. Maya Chen')} autoComplete="name" />
-            <label htmlFor="su-acct">{lt('設定帳號', 'Choose an account')}</label>
-            <input id="su-acct" name="new-username" value={account} onChange={(e) => setAccount(e.target.value)} placeholder={lt('4–20 碼英數（登入用）', '4–20 letters/digits (for login)')} autoComplete="username" />
-            <div style={{ fontSize: '.72rem', color: '#5a6378', marginTop: 4, lineHeight: 1.5 }}>{lt('帳號規則：4–20 碼，限英文字母、數字、點（.）或底線（_）；這就是你之後登入用的帳號，請自己設定並記牢。', 'Account rules: 4–20 characters — letters, digits, dot (.) or underscore (_). This is the account you’ll log in with, so choose it yourself and keep it.')}</div>
-            <label htmlFor="su-pw">{lt('設定密碼', 'Choose a password')}</label>
-            <input id="su-pw" name="new-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={lt('至少 6 碼', 'at least 6 characters')} autoComplete="new-password" />
-            <div style={{ fontSize: '.72rem', color: '#5a6378', marginTop: 4, lineHeight: 1.5 }}>{lt('密碼規則：至少 6 碼，由你自己設定；登入時可讓瀏覽器記住，下次自動帶入。忘記時可請老師或客服協助查詢。', 'Password rules: at least 6 characters, set by you. Your browser can remember it for next time; if you forget it, a teacher or support can help you retrieve it.')}</div>
-            <label htmlFor="su-email">{lt('Email（家長或學生）', 'Parent or student email')}</label>
-            <input id="su-email" name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" autoComplete="email" />
-            {!isUS && (
-              <>
-                <label htmlFor="su-phone">聯絡電話</label>
-                <input id="su-phone" name="tel" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="09xx-xxx-xxx" autoComplete="tel" />
-                <label htmlFor="su-school">就讀學校（選填）</label>
-                <input id="su-school" value={schoolName} onChange={(e) => setSchoolName(e.target.value)} placeholder={entry === 'vt' ? '例：台中高工' : '例：台中一中'} autoComplete="organization" />
-                <label htmlFor="su-city">縣市（選填）</label>
-                <select id="su-city" value={city} onChange={(e) => setCity(e.target.value)}>
-                  <option value="">請選擇…</option>
-                  {TW_CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </>
-            )}
-            <label htmlFor="su-grade">{lt('目前年級', 'Current grade')}</label>
-            <select id="su-grade" value={grade} onChange={(e) => setGrade(e.target.value)}>
-              {isUS
-                ? ['9', '10', '11', '12'].map((g) => <option key={g} value={g}>{'Grade ' + g}</option>)
-                : ['10', '11', '12'].map((g) => <option key={g} value={g}>{'高' + (g === '10' ? '一' : g === '11' ? '二' : '三') + '（' + g + '）'}</option>)}
-            </select>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, margin: '2px 0 6px' }}>
+              <p className="sub" style={{ margin: 0, flex: '1 1 220px' }}>{lt('建立帳號，開始把作品一路存下來。免費、免信用卡。', 'Create your account and capture the real work over four years. No credit card.')}</p>
+              <button type="button" className="btn-sm" onClick={() => { setErr(''); setMode('login'); }}>{lt('已有帳號，請登入 →', 'Log in →')}</button>
+            </div>
+            <div className="form-grid2">
+              <div>
+                <label htmlFor="su-name">{lt('學生姓名', 'Student’s name')}</label>
+                <input id="su-name" name="name" value={name} onChange={(e) => setName(e.target.value)} placeholder={lt('例：陳小明', 'e.g. Maya Chen')} autoComplete="name" />
+              </div>
+              <div>
+                <label htmlFor="su-email">{lt('Email（家長或學生）', 'Parent or student email')}</label>
+                <input id="su-email" name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" autoComplete="email" />
+              </div>
+              <div>
+                <label htmlFor="su-acct">{lt('設定帳號', 'Choose an account')}</label>
+                <input id="su-acct" name="new-username" value={account} onChange={(e) => setAccount(e.target.value)} placeholder={lt('4–20 碼英數（登入用）', '4–20 letters/digits (for login)')} autoComplete="username" />
+                <div className="fld-hint">{lt('4–20 碼，限英文、數字、點或底線；之後登入就用它，請記牢。', '4–20 characters — letters, digits, dot or underscore. You’ll log in with this.')}</div>
+              </div>
+              <div>
+                <label htmlFor="su-pw">{lt('設定密碼', 'Choose a password')}</label>
+                <input id="su-pw" name="new-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={lt('至少 6 碼', 'at least 6 characters')} autoComplete="new-password" />
+                <div className="fld-hint">{lt('至少 6 碼；可讓瀏覽器記住。忘記時可請老師或客服協助。', 'At least 6 characters; your browser can remember it.')}</div>
+              </div>
+              {!isUS && (
+                <>
+                  <div>
+                    <label htmlFor="su-phone">聯絡電話</label>
+                    <input id="su-phone" name="tel" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="09xx-xxx-xxx" autoComplete="tel" />
+                  </div>
+                  <div>
+                    <label htmlFor="su-grade">目前年級</label>
+                    <select id="su-grade" value={grade} onChange={(e) => setGrade(e.target.value)}>
+                      {['10', '11', '12'].map((g) => <option key={g} value={g}>{'高' + (g === '10' ? '一' : g === '11' ? '二' : '三') + '（' + g + '）'}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="su-school">就讀學校（選填）</label>
+                    <input id="su-school" value={schoolName} onChange={(e) => setSchoolName(e.target.value)} placeholder={entry === 'vt' ? '例：台中高工' : '例：台中一中'} autoComplete="organization" />
+                  </div>
+                  <div>
+                    <label htmlFor="su-city">縣市（選填）</label>
+                    <select id="su-city" value={city} onChange={(e) => setCity(e.target.value)}>
+                      <option value="">請選擇…</option>
+                      {TW_CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                </>
+              )}
+              {isUS && (
+                <div>
+                  <label htmlFor="su-grade">Current grade</label>
+                  <select id="su-grade" value={grade} onChange={(e) => setGrade(e.target.value)}>
+                    {['9', '10', '11', '12'].map((g) => <option key={g} value={g}>{'Grade ' + g}</option>)}
+                  </select>
+                </div>
+              )}
+            </div>
             {!isUS && (
               <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 12, fontSize: '.78rem', color: '#5a6378', lineHeight: 1.55 }}>
                 <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} style={{ marginTop: 3, width: 'auto' }} />
@@ -1526,7 +1672,6 @@ function Login({ onDone }) {
             )}
             <button className="btn" type="submit" style={{ marginTop: 14 }} disabled={busy}>{busy ? lt('建立中…', 'Creating…') : lt('免費建立帳號', 'Create free account')}</button>
             {err && <p className="err">{err}</p>}
-            <button type="button" className="btn-sm" style={{ marginTop: 14 }} onClick={() => { setErr(''); setMode('login'); }}>{lt('已有帳號，請登入 →', '← Already have an account? Log in')}</button>
           </form>
         )}
 
