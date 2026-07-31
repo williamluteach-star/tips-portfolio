@@ -1036,7 +1036,10 @@ function Stage2Panel({ line, deptId, vtScores, onClose }) {
   async function loadBundle() {
     setBBusy(true); setBMsg('');
     try {
-      const d = await api('bundleGet', { dept_id: deptId, line: line });
+      const d = await Promise.race([
+        api('bundleGet', { dept_id: deptId, line: line }),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('讀取逾時（30秒）——請再按一次；若一直如此請截圖給老師')), 30000)),
+      ]);
       setBundle(d);
       const sel = {}; (d.selected || []).forEach((id) => { sel[id] = true; });
       setBSel(sel);
@@ -1132,7 +1135,12 @@ function Stage2Panel({ line, deptId, vtScores, onClose }) {
 
             {/* 備審組卷：素材 ↔ 這個校系 */}
             <div className="s2-bundle">
-              {!bundle && <button className="btn-sm" disabled={bBusy} onClick={loadBundle}>{bBusy ? '讀取素材倉庫…' : '📦 挑選要交的素材（備審組卷）'}</button>}
+              {!bundle && (
+                <>
+                  <button className="btn-sm" disabled={bBusy} onClick={loadBundle}>{bBusy ? '讀取素材倉庫…' : '📦 挑選要交的素材（備審組卷）'}</button>
+                  {bMsg && <p className="err" style={{ marginTop: 6 }}>{bMsg}</p>}
+                </>
+              )}
               {bundle && (() => {
                 const byId = {}; (bundle.artifacts || []).forEach((a) => { byId[a.artifact_id] = a; });
                 const selCount = Object.keys(bSel).filter((k) => bSel[k]).length;
