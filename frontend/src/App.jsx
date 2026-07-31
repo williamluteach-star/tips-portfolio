@@ -1609,11 +1609,11 @@ function Login({ onDone }) {
               <div style={{ fontSize: 12.5, opacity: .85, marginTop: 2 }}>統測・四技二專<br />甄選入學</div>
             </div>
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 20 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginTop: 20 }}>
             <button className="btn-sm" onClick={() => { setEntry('any'); setMode('login'); }}>已有帳號，請登入 →</button>
             <button className="btn-sm" onClick={() => { window.location.search = '?m=us'; }}>美國升學？前往英文版 →</button>
           </div>
-          <p style={{ fontSize: '.74rem', color: '#5a6378', marginTop: 8 }}>登入不用選線——帳號會記得你是高中還是技高。</p>
+          <p style={{ fontSize: '.74rem', color: '#5a6378', marginTop: 8, textAlign: 'center' }}>登入不用選線——帳號會記得你是高中還是技高。</p>
         </div>
       </div>
     );
