@@ -681,14 +681,36 @@ function CoachPanel({ cols, schoolType }) {
     else { if (cur.length >= COACH_MAX) { setErr('一次最多選 ' + COACH_MAX + ' 個校系，教練才能給精準建議。'); return; } cur.push(m); }
     setSel(cur);
   }
+  const [chat, setChat] = useState([]);     // 追問來回 [{q, a}]
+  const [fuQ, setFuQ] = useState('');
+  const [fuBusy, setFuBusy] = useState(false);
+  const [fuErr, setFuErr] = useState('');
+  const FU_MAX = 10;
   async function ask() {
     if (!sel.length) { setErr('先從上面點選 1–' + COACH_MAX + ' 個想問的校系。'); return; }
-    setBusy(true); setErr(''); setOut('');
+    setBusy(true); setErr(''); setOut(''); setChat([]); setFuQ(''); setFuErr('');
     try {
       const d = await api('coachDirection', { school_type: schoolType, targets: sel.map((s) => ({ dept_id: s.dept_id, school: s.school, dept: s.dept, group: s.group, tier: s.tier })) });
       setOut((d && d.text) || '');
     } catch (e) { setErr(e.message); }
     setBusy(false);
+  }
+  async function followup() {
+    const q = fuQ.trim();
+    if (!q) { setFuErr('想追問什麼？先把問題打出來（例如：A 校和 B 校怎麼選？）'); return; }
+    if (chat.length >= FU_MAX) return;
+    setFuBusy(true); setFuErr('');
+    try {
+      const d = await api('coachFollowup', {
+        school_type: schoolType,
+        summary: out.slice(0, 3000),
+        thread: chat.map((c) => ({ q: c.q.slice(0, 200), a: c.a.slice(0, 600) })),
+        question: q,
+      });
+      setChat(chat.concat([{ q: q, a: (d && d.text) || '' }]));
+      setFuQ('');
+    } catch (e) { setFuErr(e.message); }
+    setFuBusy(false);
   }
   if (!items.length) return null;
   return (
@@ -708,6 +730,30 @@ function CoachPanel({ cols, schoolType }) {
       {err && <p style={{ color: '#b3261e', fontSize: '.85rem' }}>{err}</p>}
       {out && (
         <div style={{ marginTop: 12, background: '#fff', border: '1.5px solid #cfe9df', borderRadius: 12, padding: '14px 16px', fontSize: '.9rem', lineHeight: 1.7, whiteSpace: 'pre-wrap', color: '#16233b' }}>{out}</div>
+      )}
+      {out && (
+        <div style={{ marginTop: 12 }}>
+          <div style={{ fontWeight: 800, fontSize: '.9rem', color: '#0a4d3f' }}>💬 有疑問？直接追問教練</div>
+          {chat.map((c, i) => (
+            <div key={i}>
+              <div className="fu-me">{c.q}</div>
+              <div className="fu-ai">{c.a}</div>
+            </div>
+          ))}
+          {chat.length < FU_MAX ? (
+            <div style={{ display: 'flex', gap: 8, marginTop: 8, alignItems: 'flex-start' }}>
+              <textarea rows="2" value={fuQ} onChange={(e) => setFuQ(e.target.value)} disabled={fuBusy}
+                placeholder="例如：A 校和 B 校怎麼選？／如果我英文再多 1 級分呢？"
+                style={{ flex: 1, border: '1.5px solid #cfe9df', borderRadius: 10, padding: '8px 10px', fontSize: '.88rem', fontFamily: 'inherit', resize: 'vertical' }} />
+              <button onClick={followup} disabled={fuBusy} style={{ background: '#0f6b57', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 14px', fontWeight: 800, cursor: fuBusy ? 'default' : 'pointer', opacity: fuBusy ? .7 : 1, whiteSpace: 'nowrap' }}>
+                {fuBusy ? '教練思考中…' : '追問（' + (chat.length + 1) + '/' + FU_MAX + '）'}
+              </button>
+            </div>
+          ) : (
+            <p style={{ color: '#b06f00', fontSize: '.82rem', fontWeight: 700, marginTop: 8 }}>這一輪建議的 {FU_MAX} 次追問用完了——方向還不清楚的話，重新跑一次落點＋問教練，或直接找老師聊。</p>
+          )}
+          {fuErr && <p style={{ color: '#b3261e', fontSize: '.85rem' }}>{fuErr}</p>}
+        </div>
       )}
     </div>
   );
@@ -1018,8 +1064,9 @@ function InterviewCoach({ line, deptId, school, dept, onClose }) {
   const [qNote, setQNote] = useState('');
   const [openQ, setOpenQ] = useState(-1);     // 展開演練的題目 index
   const [ans, setAns] = useState('');
-  const [fb, setFb] = useState({});           // {qIndex: feedbackText}
+  const [fb, setFb] = useState({});           // {qIndex: [{me, coach}, ...]} 每題的對答串
   const [remaining, setRemaining] = useState(null);
+  const IV_FU_DEPTH = 3;                      // 每題追問來回上限（與後端一致）
 
   async function loadQ(force) {
     setBusy('q'); setErr('');
@@ -1044,8 +1091,11 @@ function InterviewCoach({ line, deptId, school, dept, onClose }) {
     setBusy('fb'); setErr('');
     try {
       const qLine = blocks[i].split('\n')[0];
-      const d = await api('interviewFeedback', { dept_id: deptId, line: line, question: qLine, answer: ans });
-      setFb(Object.assign({}, fb, { [i]: d.text }));
+      const exs = fb[i] || [];
+      const payload = { dept_id: deptId, line: line, question: qLine, answer: ans };
+      if (exs.length) payload.thread = exs.map((e) => ({ me: String(e.me).slice(0, 500), coach: String(e.coach).slice(0, 500) }));
+      const d = await api('interviewFeedback', payload);
+      setFb(Object.assign({}, fb, { [i]: exs.concat([{ me: ans, coach: d.text }]) }));
       if (typeof d.remaining === 'number') setRemaining(d.remaining);
       setAns('');
     } catch (e) { setErr(e.message); }
@@ -1065,27 +1115,39 @@ function InterviewCoach({ line, deptId, school, dept, onClose }) {
             {qNote && <p className="hint" style={{ margin: '0 0 8px', color: '#b06f00', fontWeight: 700 }}>{qNote}</p>}
             {cached && !qNote && <p className="hint" style={{ margin: '0 0 8px' }}>↺ 這是之前出過的題目（不重複計費）。素材有更新想換題？<a onClick={() => loadQ(true)} style={{ cursor: 'pointer', fontWeight: 700 }}>重新出題（每系最多 3 輪）</a></p>}
             {intro && <pre className="iv-intro">{intro}</pre>}
-            {blocks.map((b, i) => (
-              <div key={i} className="iv-q">
-                <pre className="iv-qtext">{b}</pre>
-                {openQ === i ? (
-                  <div className="iv-practice">
-                    <textarea rows="4" value={ans} onChange={(e) => setAns(e.target.value)}
-                      placeholder="把你會怎麼回答打出來（口語就好，像真的在面試講話）…" />
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                      <button className="btn-sm" disabled={busy === 'fb'} onClick={() => practice(i)}>
-                        {busy === 'fb' ? '教練聽你回答中…' : '送出演練' + (remaining !== null ? '（此系剩 ' + remaining + ' 次）' : '')}
-                      </button>
-                      <button className="btn-ghost" onClick={() => { setOpenQ(-1); setAns(''); }}>收起</button>
+            {blocks.map((b, i) => {
+              const exs = fb[i] || [];
+              const hasFu = exs.length > 0;                       // 已有第一次回饋 → 進入追問對答
+              const fuDone = exs.length > IV_FU_DEPTH;            // 1 次演練 + 2 輪追問 = 收尾
+              return (
+                <div key={i} className="iv-q">
+                  <pre className="iv-qtext">{b}</pre>
+                  {exs.map((e, j) => (
+                    <div key={j}>
+                      {j > 0 && <div className="fu-me">{e.me}</div>}
+                      <pre className="iv-fb">{e.coach}</pre>
                     </div>
-                  </div>
-                ) : (
-                  <button className="s2-btn" onClick={() => { setOpenQ(i); setAns(''); }}>🎯 演練這題</button>
-                )}
-                {fb[i] && <pre className="iv-fb">{fb[i]}</pre>}
-              </div>
-            ))}
-            <p className="hint" style={{ marginTop: 8 }}>每個校系演練上限 10 次；最後階段建議找老師或家人做真人模擬（計時＋錄音回聽）。</p>
+                  ))}
+                  {fuDone ? (
+                    <p className="hint" style={{ color: '#b06f00', fontWeight: 700 }}>這題來回夠深了——換下一題，或把這題的骨架講給家人聽一遍。</p>
+                  ) : openQ === i ? (
+                    <div className="iv-practice">
+                      <textarea rows="4" value={ans} onChange={(e) => setAns(e.target.value)}
+                        placeholder={hasFu ? '回答教練的【追問】——像真的面試一樣，順著剛剛的對話繼續講…' : '把你會怎麼回答打出來（口語就好，像真的在面試講話）…'} />
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <button className="btn-sm" disabled={busy === 'fb'} onClick={() => practice(i)}>
+                          {busy === 'fb' ? '教練聽你回答中…' : (hasFu ? '回覆追問（這題來回 ' + exs.length + '/' + IV_FU_DEPTH + '）' : '送出演練') + (remaining !== null ? '（此系剩 ' + remaining + ' 次）' : '')}
+                        </button>
+                        <button className="btn-ghost" onClick={() => { setOpenQ(-1); setAns(''); }}>收起</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button className="s2-btn" onClick={() => { setOpenQ(i); setAns(''); }}>{hasFu ? '💬 繼續對答（回覆教練的追問）' : '🎯 演練這題'}</button>
+                  )}
+                </div>
+              );
+            })}
+            <p className="hint" style={{ marginTop: 8 }}>每個校系演練上限 30 次（含追問對答，7 題全部練完含追問都夠）；每題最多來回 {IV_FU_DEPTH} 輪追問。最後階段建議找老師或家人做真人模擬（計時＋錄音回聽）。</p>
           </>
         )}
       </div>
@@ -2080,14 +2142,32 @@ function ArtifactCoach({ artifact }) {
   const [reflectOut, setReflectOut] = useState('');
   const [sumOut, setSumOut] = useState('');
   const [draft, setDraft] = useState(artifact.summary_100 || '');
-  const [busy, setBusy] = useState('');        // '' | 'reflect' | 'summary'
+  const [busy, setBusy] = useState('');        // '' | 'reflect' | 'summary' | 'rfchat'
   const [err, setErr] = useState('');
   const [remaining, setRemaining] = useState(null);
+  const [rfChat, setRfChat] = useState([]);    // 反思對答 [{me, coach}]
+  const [rfAns, setRfAns] = useState('');
+  const RF_FU_DEPTH = 4;
 
   async function reflect(force) {
     setBusy('reflect'); setErr('');
-    try { const d = await api('aiReflect', { artifact_id: artifact.artifact_id, force: !!force }); setReflectOut(d.text); }
+    try { const d = await api('aiReflect', { artifact_id: artifact.artifact_id, force: !!force }); setReflectOut(d.text); setRfChat([]); setRfAns(''); }
     catch (e) { setErr(e.message); }
+    finally { setBusy(''); }
+  }
+  async function reflectReply() {
+    if (!rfAns.trim()) { setErr('先把你的回答打出來（講事實就好：哪時候、做了什麼、結果如何）。'); return; }
+    setBusy('rfchat'); setErr('');
+    try {
+      const d = await api('aiReflectChat', {
+        artifact_id: artifact.artifact_id,
+        reflect: reflectOut.slice(0, 1200),
+        thread: rfChat.map((c) => ({ me: String(c.me).slice(0, 500), coach: String(c.coach).slice(0, 500) })),
+        answer: rfAns,
+      });
+      setRfChat(rfChat.concat([{ me: rfAns, coach: d.text }]));
+      setRfAns('');
+    } catch (e) { setErr(e.message); }
     finally { setBusy(''); }
   }
   async function checkSummary() {
@@ -2110,10 +2190,28 @@ function ArtifactCoach({ artifact }) {
       {reflectOut && (
         <div className="coach-out">
           <pre>{reflectOut}</pre>
-          <div className="coach-btns">
-            <button className="btn-sm" onClick={() => navigator.clipboard.writeText(reflectOut)}>複製</button>
-            <button className="btn-ghost" disabled={!!busy} onClick={() => reflect(true)}>↻ 重新產生（會再用一次 AI）</button>
-          </div>
+          {rfChat.map((c, i) => (
+            <div key={i}>
+              <div className="fu-me">{c.me}</div>
+              <div className="fu-ai">{c.coach}</div>
+            </div>
+          ))}
+          {rfChat.length < RF_FU_DEPTH ? (
+            <div className="iv-practice" style={{ marginTop: 8 }}>
+              <textarea rows="3" value={rfAns} onChange={(e) => setRfAns(e.target.value)}
+                placeholder={rfChat.length ? '接著回答教練——愈具體愈好…' : '直接回答教練的問題（講事實就好：哪時候、做了什麼、結果如何）…'} />
+              <div className="coach-btns">
+                <button className="btn-sm" disabled={!!busy} onClick={reflectReply}>
+                  {busy === 'rfchat' ? '教練聽你說…' : '💬 回覆教練（' + (rfChat.length + 1) + '/' + RF_FU_DEPTH + ' 輪）'}
+                </button>
+                <button className="btn-sm" onClick={() => navigator.clipboard.writeText(reflectOut)}>複製</button>
+                <button className="btn-ghost" disabled={!!busy} onClick={() => reflect(true)}>↻ 換一輪引導</button>
+                <span className="coach-quota">換一輪會多用 1 次 AI</span>
+              </div>
+            </div>
+          ) : (
+            <p className="hint" style={{ color: '#b06f00', fontWeight: 700, marginTop: 8 }}>來回 {RF_FU_DEPTH} 輪囉——你講出來的料夠了，往下把 100 字簡述寫出來，再送教練健檢。</p>
+          )}
         </div>
       )}
 
@@ -2127,7 +2225,7 @@ function ArtifactCoach({ artifact }) {
         <button className="btn-sm" disabled={!!busy || !draft.trim()} onClick={checkSummary}>
           ✍️ 送給教練檢查{remaining !== null ? `（本件剩 ${remaining} 次）` : ''}
         </button>
-        <span className="coach-quota">每件最多 3 次・同段沒改不重算</span>
+        <span className="coach-quota">每件最多 5 次・同段沒改不重算</span>
       </div>
       {busy === 'summary' && <p className="empty-hint">教練檢查中…（約 10–20 秒）</p>}
       {sumOut && (
