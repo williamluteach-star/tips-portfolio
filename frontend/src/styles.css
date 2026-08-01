@@ -321,6 +321,14 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .bnd-row-name { font-weight: 700; flex: 1 1 200px; }
 .bnd-row small { color: var(--graphite); font-size: 0.72rem; }
 
+
+/* ---------- 面試模擬教練 ---------- */
+.iv-intro { white-space: pre-wrap; font-family: var(--font-body); font-size: 0.84rem; color: var(--graphite); background: none; border: none; margin-bottom: 8px; line-height: 1.6; }
+.iv-q { background: #fff; border: 1.5px solid var(--rule); border-radius: 12px; padding: 10px 14px; margin-bottom: 10px; }
+.iv-qtext { white-space: pre-wrap; font-family: var(--font-body); font-size: 0.86rem; line-height: 1.65; background: none; border: none; margin: 0 0 6px; }
+.iv-practice textarea { width: 100%; border: 1.5px solid var(--rule); border-radius: 8px; padding: 8px 10px; font-family: var(--font-body); font-size: 0.88rem; margin-bottom: 6px; }
+.iv-fb { white-space: pre-wrap; font-family: var(--font-body); font-size: 0.84rem; line-height: 1.65; background: var(--coachbg, #f4faf7); border: 1.5px dashed #0f6b57; border-radius: 10px; padding: 10px 12px; margin-top: 8px; }
+
 /* ---------- 老師：待認證清單 ---------- */
 .cert-row { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1.5px solid var(--rule); border-radius: 12px; margin-bottom: 10px; background: #fff; }
 .cert-info { flex: 1; min-width: 0; }

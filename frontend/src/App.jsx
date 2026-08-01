@@ -1008,6 +1008,91 @@ function VtScreen({ student, last }) {
   );
 }
 
+/* ============ 面試模擬教練（二階甄試） ============ */
+
+function InterviewCoach({ line, deptId, school, dept, onClose }) {
+  const [qText, setQText] = useState('');
+  const [busy, setBusy] = useState('');       // '' | 'q' | 'fb'
+  const [err, setErr] = useState('');
+  const [cached, setCached] = useState(false);
+  const [qNote, setQNote] = useState('');
+  const [openQ, setOpenQ] = useState(-1);     // 展開演練的題目 index
+  const [ans, setAns] = useState('');
+  const [fb, setFb] = useState({});           // {qIndex: feedbackText}
+  const [remaining, setRemaining] = useState(null);
+
+  async function loadQ(force) {
+    setBusy('q'); setErr('');
+    try {
+      const d = await api('interviewQuestions', { dept_id: deptId, line: line, force: !!force });
+      setQText(d.text); setCached(!!d.cached); setQNote(d.note || '');
+    } catch (e) { setErr(e.message); }
+    setBusy('');
+  }
+  useEffect(() => { setQText(''); setFb({}); setOpenQ(-1); setAns(''); setRemaining(null); loadQ(false); }, [deptId]);
+
+  // 把回覆切成題目卡（【第N題】開頭）
+  const blocks = [];
+  if (qText) {
+    const parts = qText.split(/(?=【第\d+題】)/);
+    parts.forEach((s) => { const t = s.trim(); if (t.startsWith('【第')) blocks.push(t); });
+  }
+  const intro = qText && blocks.length ? qText.slice(0, qText.indexOf(blocks[0])).trim() : qText;
+
+  async function practice(i) {
+    if (!ans.trim()) { setErr('先把你的作答打出來（講一遍你會怎麼答），教練才能回饋。'); return; }
+    setBusy('fb'); setErr('');
+    try {
+      const qLine = blocks[i].split('\n')[0];
+      const d = await api('interviewFeedback', { dept_id: deptId, line: line, question: qLine, answer: ans });
+      setFb(Object.assign({}, fb, { [i]: d.text }));
+      if (typeof d.remaining === 'number') setRemaining(d.remaining);
+      setAns('');
+    } catch (e) { setErr(e.message); }
+    setBusy('');
+  }
+
+  return (
+    <div className="s2-overlay" style={{ zIndex: 60 }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="s2-card">
+        <button className="s2-close" onClick={onClose}>✕</button>
+        <h3 style={{ margin: '0 0 2px' }}>🎤 面試模擬教練</h3>
+        <p style={{ fontSize: '.8rem', color: '#5a6378', margin: '0 0 10px' }}>{school} {dept}——依該系甄試說明＋你的素材出題。教練只給題目、架構與回饋，<b>不代寫逐字稿</b>。</p>
+        {busy === 'q' && <p className="empty-hint">教練研究這個系的甄試方式＋你的素材中…（約 30–60 秒）</p>}
+        {err && <p className="err">{err}</p>}
+        {qText && (
+          <>
+            {qNote && <p className="hint" style={{ margin: '0 0 8px', color: '#b06f00', fontWeight: 700 }}>{qNote}</p>}
+            {cached && !qNote && <p className="hint" style={{ margin: '0 0 8px' }}>↺ 這是之前出過的題目（不重複計費）。素材有更新想換題？<a onClick={() => loadQ(true)} style={{ cursor: 'pointer', fontWeight: 700 }}>重新出題（每系最多 3 輪）</a></p>}
+            {intro && <pre className="iv-intro">{intro}</pre>}
+            {blocks.map((b, i) => (
+              <div key={i} className="iv-q">
+                <pre className="iv-qtext">{b}</pre>
+                {openQ === i ? (
+                  <div className="iv-practice">
+                    <textarea rows="4" value={ans} onChange={(e) => setAns(e.target.value)}
+                      placeholder="把你會怎麼回答打出來（口語就好，像真的在面試講話）…" />
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <button className="btn-sm" disabled={busy === 'fb'} onClick={() => practice(i)}>
+                        {busy === 'fb' ? '教練聽你回答中…' : '送出演練' + (remaining !== null ? '（此系剩 ' + remaining + ' 次）' : '')}
+                      </button>
+                      <button className="btn-ghost" onClick={() => { setOpenQ(-1); setAns(''); }}>收起</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button className="s2-btn" onClick={() => { setOpenQ(i); setAns(''); }}>🎯 演練這題</button>
+                )}
+                {fb[i] && <pre className="iv-fb">{fb[i]}</pre>}
+              </div>
+            ))}
+            <p className="hint" style={{ marginTop: 8 }}>每個校系演練上限 10 次；最後階段建議找老師或家人做真人模擬（計時＋錄音回聽）。</p>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ============ 二階總成績試算（甄選過一階之後） ============ */
 
 function Stage2Panel({ line, deptId, vtScores, onClose }) {
@@ -1015,6 +1100,7 @@ function Stage2Panel({ line, deptId, vtScores, onClose }) {
   const [err, setErr] = useState('');
   const [vals, setVals] = useState({});
   const [bonus, setBonus] = useState(0);
+  const [iv, setIv] = useState(false);          // 面試模擬教練
   const [bundle, setBundle] = useState(null);   // 備審組卷
   const [bSel, setBSel] = useState({});
   const [bBusy, setBBusy] = useState(false);
@@ -1172,6 +1258,11 @@ function Stage2Panel({ line, deptId, vtScores, onClose }) {
                   </>
                 );
               })()}
+            </div>
+
+            <div className="s2-bundle" style={{ paddingTop: 10 }}>
+              <button className="btn-sm" onClick={() => setIv(true)}>🎤 面試模擬教練——這系會怎麼問我？</button>
+              {iv && <InterviewCoach line={line} deptId={deptId} school={data.school} dept={data.dept} onClose={() => setIv(false)} />}
             </div>
 
             <div className="s2-rules">
